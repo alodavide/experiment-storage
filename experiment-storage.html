@@ -1,0 +1,187 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../paper-dialog/paper-dialog.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-button-group/paper-button-group.html">
+<link rel="import" href="../paper-button/paper-button.html">
+
+<script type="text/javascript" src="./js/igVisualizer.min.js"></script>
+<!--
+`experiment-storage`
+Key-value store for experimental data in Arlecchino
+
+@demo demo/index.html 
+-->
+
+<dom-module id="experiment-storage">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      paper-button.red {
+        margin-bottom: 5px;
+        margin-top: 5px;
+        background-color: var(--paper-red-500);
+        color: white;
+      }
+
+      paper-button.grey {
+        margin-bottom: 5px;
+        margin-top: 5px;
+        background-color: var(--paper-grey-700);
+        color: white;
+      }
+      paper-button.red[active] {
+        background-color: var(--paper-blue-500);
+      }
+
+    </style>
+
+
+    <div>
+      <paper-button-group id="explist" selected="">
+        <template is="dom-repeat" items="[[experimentList]]">
+          <paper-button toggles raised name="[[item.id]]" class="red" on-change="handleChange">[[item.name]]</paper-button>
+        </template>
+      </paper-button-group>
+
+      <paper-button class="grey"  raised onclick="dialogimport.open()">Add New Experiment</paper-button>
+    </div>
+    <paper-dialog id="dialogimport">
+      <h2>Import a new Experiment</h2>
+      <div>
+        <paper-input id="expname" label="Experiment Name" required="true"></paper-input>
+        <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
+        <p>
+        <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
+        <paper-button raised class="red" onclick="dialogimport.close()">Cancel</paper-button>
+        </p>
+      </div>
+    </paper-dialog>
+
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'experiment-storage',
+
+      properties: {
+        experimentList: {
+          type: Array,
+          value: function() { return []; }
+        },
+        selectedExperiment: {
+          type: Number,
+          notify: true,
+          reflectToAttribute: true
+        },
+        experimentId: {
+          type: Number,
+          value: 0
+        }
+      },
+
+      created: function(){
+
+        if(this._lsTest() === true) {
+          console.log("LocalStorage check: success");
+        } else {
+          alert('The LocalStorage is not supported in this browser.');
+        }
+
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+          console.log("File APIs check: success");
+        } else {
+          alert('The File APIs are not fully supported in this browser.');
+        }
+
+      },
+
+
+      handleChange: function(e) {
+        this.selectedExperiment = e.target.id;
+      },
+
+      uploadExperiment: function(){
+        var experimentInput = {};
+        var expname =this.$.expname;
+        var expfile =this.$.expfile;
+        var dialogimport = this.$.dialogimport;
+
+        experimentInput.name = expname.value;
+        var file = expfile.inputElement.files[0];
+
+        var reader = new FileReader();
+
+        reader.onload = function(e) {
+          // Print the contents of the file
+          var text = e.target.result;
+
+          var lines = text.split(/[\r\n]+/g); // tolerate both Windows and Unix linebreaks
+          var glycanList = [];
+          for(var i = 0; i < lines.length; i++) {
+            var glycan = new igVisualizer.Glycan(lines[i]);
+            glycanList.push(glycan);
+          }
+
+          experimentInput.data = this._normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
+          dialogimport.close();
+
+        };
+
+        reader.readAsText(file);
+
+        localStorage.setItem('AID_'+this.experimentId, experimentInput);
+        this._updateExpList(experimentInput.name);
+
+        expname.value = '';
+        expfile.inputElement.value = '';
+      },
+
+      _updateExpList: function(experimentName){
+        var experiment = {};
+        experiment.name = experimentName;
+        experiment.id = 'AID_'+this.experimentId;
+
+        this.push('experimentList', experiment);
+        this.experimentId++;
+
+      },
+
+      _normalizeData: function (sankeydata){
+        sankeydata.nodes = sankeydata.nodes.map(function(x) {
+          return {
+            name: x[0].composition.toStringNoZeros(),
+            percentage: x[0].percentage,
+            size: x[0].composition.calculateSize(),
+            unicarbEncoding: x[0].composition.toUnicarbLongEncoding()
+          };
+        });
+
+        sankeydata.links = sankeydata.links.map(function(x) {
+          return {
+            source: x.source,
+            target: x.target,
+            difference: x.difference,
+            value: 1
+          };
+        });
+        return sankeydata;
+      },
+
+
+    _lsTest: function(){
+      var test = 'test';
+      try {
+        localStorage.setItem(test, test);
+        localStorage.removeItem(test);
+        return true;
+      } catch(e) {
+        return false;
+      }
+    }
+    });
+  </script>
+</dom-module>
