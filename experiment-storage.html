@@ -5,6 +5,8 @@
 <link rel="import" href="../paper-button/paper-button.html">
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
+<script type="text/javascript" src="../d3/d3.min.js"></script>
+
 <!--
 `experiment-storage`
 Key-value store for experimental data in Arlecchino
@@ -102,6 +104,7 @@ Key-value store for experimental data in Arlecchino
           alert('The File APIs are not fully supported in this browser.');
         }
 
+        //todo: fix loading d3. Must be loaded only if is not present.
       },
 
 
@@ -118,20 +121,46 @@ Key-value store for experimental data in Arlecchino
         var file = expfile.inputElement.files[0];
 
         var reader = new FileReader();
-
+        var changeStatePopUp = this._changePopUpState();
         reader.onload = function(e) {
           // Print the contents of the file
-          var text = e.target.result;
+          var csvFile = e.target.result;
 
-          var lines = text.split(/[\r\n]+/g); // tolerate both Windows and Unix linebreaks
-          var glycanList = [];
-          for(var i = 0; i < lines.length; i++) {
-            var glycan = new igVisualizer.Glycan(lines[i]);
-            glycanList.push(glycan);
+          d3.csv.parse(csvFile, function(dataCSV) {
+            var glycanList = _buildGlycanList(dataCSV);
+            experimentInput.data = _normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
+          });
+
+          function _buildGlycanList(csv){
+            var glycanList = [];
+            for (var i = 0; i < csv.length; i++) {
+              var glycan = new igVisualizer.Glycan(csv[i]);
+              glycanList.push(glycan);
+            }
+            return glycanList;
           }
 
-          experimentInput.data = this._normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
-          this._changePopUpState();
+          function _normalizeData(sankeydata){
+            sankeydata.nodes = sankeydata.nodes.map(function(x) {
+              return {
+                name: x[0].composition.toStringNoZeros(),
+                percentage: x[0].percentage,
+                size: x[0].composition.calculateSize(),
+                unicarbEncoding: x[0].composition.toUnicarbLongEncoding()
+              };
+            });
+
+            sankeydata.links = sankeydata.links.map(function(x) {
+              return {
+                source: x.source,
+                target: x.target,
+                difference: x.difference,
+                value: 1
+              };
+            });
+            return sankeydata;
+          }
+
         };
 
         reader.readAsText(file);
@@ -143,6 +172,8 @@ Key-value store for experimental data in Arlecchino
         expfile.inputElement.value = '';
       },
 
+
+
       _updateExpList: function(experimentName){
         var experiment = {};
         experiment.name = experimentName;
@@ -151,27 +182,6 @@ Key-value store for experimental data in Arlecchino
         this.push('experimentList', experiment);
         this.experimentId++;
 
-      },
-
-      _normalizeData: function (sankeydata){
-        sankeydata.nodes = sankeydata.nodes.map(function(x) {
-          return {
-            name: x[0].composition.toStringNoZeros(),
-            percentage: x[0].percentage,
-            size: x[0].composition.calculateSize(),
-            unicarbEncoding: x[0].composition.toUnicarbLongEncoding()
-          };
-        });
-
-        sankeydata.links = sankeydata.links.map(function(x) {
-          return {
-            source: x.source,
-            target: x.target,
-            difference: x.difference,
-            value: 1
-          };
-        });
-        return sankeydata;
       },
 
       _dialogStateChange: function(newValue){
