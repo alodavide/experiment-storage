@@ -44,7 +44,7 @@ Key-value store for experimental data in Arlecchino
     <div>
       <paper-button-group id="explist" selected="">
         <template is="dom-repeat" items="[[experimentList]]">
-          <paper-button toggles raised name="[[item.id]]" class="red" on-change="handleChange">[[item.name]]</paper-button>
+          <paper-button toggles raised name="[[item.id]]" class="red" on-click="handleChange">[[item.name]]</paper-button>
         </template>
       </paper-button-group>
 
