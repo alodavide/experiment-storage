@@ -46,7 +46,7 @@ Key-value store for experimental data in Arlecchino
         </template>
       </paper-button-group>
 
-      <paper-button class="grey"  raised onclick="dialogimport.open()">Add New Experiment</paper-button>
+      <paper-button class="grey"  raised on-click="_changePopUpState">Add New Experiment</paper-button>
     </div>
     <paper-dialog id="dialogimport">
       <h2>Import a new Experiment</h2>
@@ -54,8 +54,8 @@ Key-value store for experimental data in Arlecchino
         <paper-input id="expname" label="Experiment Name" required="true"></paper-input>
         <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
         <p>
-        <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
-        <paper-button raised class="red" onclick="dialogimport.close()">Cancel</paper-button>
+          <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
+          <paper-button raised class="red" on-click="_changePopUpState">Cancel</paper-button>
         </p>
       </div>
     </paper-dialog>
@@ -80,6 +80,11 @@ Key-value store for experimental data in Arlecchino
         experimentId: {
           type: Number,
           value: 0
+        },
+        dialogOpenState:{
+          type: Boolean,
+          value: false,
+          observer: "_dialogStateChange"
         }
       },
 
@@ -108,7 +113,6 @@ Key-value store for experimental data in Arlecchino
         var experimentInput = {};
         var expname =this.$.expname;
         var expfile =this.$.expfile;
-        var dialogimport = this.$.dialogimport;
 
         experimentInput.name = expname.value;
         var file = expfile.inputElement.files[0];
@@ -127,8 +131,7 @@ Key-value store for experimental data in Arlecchino
           }
 
           experimentInput.data = this._normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
-          dialogimport.close();
-
+          this._changePopUpState();
         };
 
         reader.readAsText(file);
@@ -171,17 +174,28 @@ Key-value store for experimental data in Arlecchino
         return sankeydata;
       },
 
+      _dialogStateChange: function(newValue){
+        if(newValue){
+          this.$.dialogimport.open();
+        } else{
+          this.$.dialogimport.close();
+        }
+      },
 
-    _lsTest: function(){
-      var test = 'test';
-      try {
-        localStorage.setItem(test, test);
-        localStorage.removeItem(test);
-        return true;
-      } catch(e) {
-        return false;
+      _changePopUpState: function(){
+        this.dialogOpenState = !this.dialogOpenState;
+      },
+
+      _lsTest: function(){
+        var test = 'test';
+        try {
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          return true;
+        } catch(e) {
+          return false;
+        }
       }
-    }
     });
   </script>
 </dom-module>
