@@ -75,7 +75,7 @@ Key-value store for experimental data in Arlecchino
           value: function() { return []; }
         },
         selectedExperiment: {
-          type: Number,
+          type: String,
           notify: true,
           reflectToAttribute: true
         },
@@ -125,20 +125,14 @@ Key-value store for experimental data in Arlecchino
         reader.onload = function(e) {
           // Print the contents of the file
           var csvFile = e.target.result;
-
+          var glycanList = [];
           d3.csv.parse(csvFile, function(dataCSV) {
-            var glycanList = _buildGlycanList(dataCSV);
-            experimentInput.data = _normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
+
+            var glycan = new igVisualizer.Glycan(dataCSV);
+            glycanList.push(glycan);
           });
 
-          function _buildGlycanList(csv){
-            var glycanList = [];
-            for (var i = 0; i < csv.length; i++) {
-              var glycan = new igVisualizer.Glycan(csv[i]);
-              glycanList.push(glycan);
-            }
-            return glycanList;
-          }
+          experimentInput.data = _normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
 
           function _normalizeData(sankeydata){
             sankeydata.nodes = sankeydata.nodes.map(function(x) {
@@ -160,18 +154,16 @@ Key-value store for experimental data in Arlecchino
             });
             return sankeydata;
           }
-
         };
 
         reader.readAsText(file);
 
-        localStorage.setItem('AID_'+this.experimentId, experimentInput);
+        localStorage.setItem('AID_'+this.experimentId, JSON.stringify(experimentInput));
         this._updateExpList(experimentInput.name);
 
         expname.value = '';
         expfile.inputElement.value = '';
       },
-
 
 
       _updateExpList: function(experimentName){
