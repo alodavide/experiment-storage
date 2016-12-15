@@ -38,12 +38,18 @@ Key-value store for experimental data in Arlecchino
         background-color: var(--paper-blue-500);
       }
 
+      .big {
+        display: inline;
+        font-size: x-large;
+        font-weight: bold;
+      }
+
     </style>
 
 
     <div>
       <template is="dom-if" if="{{introMessage}}">
-        <p>Use the <h1>+</h1> button to add your experiments</p>
+        <p style="display:inline;">Use the  <div class="big">+</div>  button to add your experiments</p>
       </template>
       <paper-button-group id="explist" selected="">
         <template is="dom-repeat" items="[[experimentList]]">
