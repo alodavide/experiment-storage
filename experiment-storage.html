@@ -42,6 +42,9 @@ Key-value store for experimental data in Arlecchino
 
 
     <div>
+      <template is="dom-if" if="{{_noExperiment}}">
+        <p>Upload your experiments. Start using the + button</p>
+      </template>
       <paper-button-group id="explist" selected="">
         <template is="dom-repeat" items="[[experimentList]]">
           <paper-button toggles raised name="[[item.id]]" class="red" on-click="handleChange">[[item.name]]</paper-button>
@@ -68,9 +71,11 @@ Key-value store for experimental data in Arlecchino
       is: 'experiment-storage',
 
       properties: {
+
         experimentList: {
           type: Array,
-          value: function() { return []; }
+          value: function() { return []; },
+          observer: '_noExperiment'
         },
         selectedExperiment: {
           type: String,
@@ -89,7 +94,6 @@ Key-value store for experimental data in Arlecchino
       },
 
       created: function(){
-
         if(this._lsTest() === true) {
           console.log("LocalStorage check: success");
         } else {
@@ -105,6 +109,12 @@ Key-value store for experimental data in Arlecchino
         //todo: fix loading d3. Must be loaded only if is not present.
       },
 
+      _noExperiment: function () {
+        if(this.experimentList.length = 0){
+          return true;
+        }
+        return false;
+      },
 
       handleChange: function(e) {
         this.selectedExperiment = e.target.name;
