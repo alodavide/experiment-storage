@@ -49,7 +49,7 @@ Key-value store for experimental data in Arlecchino
 
     <div>
       <template is="dom-if" if="{{introMessage}}">
-        <p style="display:inline;">Use the  <div class="big">+</div>  button to add your experiments</p>
+        <div style="display:inline;">Use the  <div class="big">+</div>  button to add your experiments</div>
       </template>
       <paper-button-group id="explist" selected="">
         <template is="dom-repeat" items="[[experimentList]]">
