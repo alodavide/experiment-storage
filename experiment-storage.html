@@ -55,7 +55,7 @@ Key-value store for experimental data in Arlecchino
         <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
         <p>
           <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
-          <paper-button raised class="red" on-click="_changePopUpState">Cancel</paper-button>
+          <paper-button raised class="red" on-click="changePopUpState">Cancel</paper-button>
         </p>
       </div>
     </paper-dialog>
@@ -119,7 +119,7 @@ Key-value store for experimental data in Arlecchino
         var file = expfile.inputElement.files[0];
 
         var reader = new FileReader();
-        var changeStatePopUp = this._changePopUpState();
+        var changeStatePopUp = this.changePopUpState();
         reader.onload = function(e) {
           // Print the contents of the file
           var csvFile = e.target.result;
