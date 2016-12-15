@@ -42,6 +42,9 @@ Key-value store for experimental data in Arlecchino
 
 
     <div>
+      <template is="dom-if" if="{{introMessage}}">
+        <p>Use the <h1>+</h1> button to add your experiments</p>
+      </template>
       <paper-button-group id="explist" selected="">
         <template is="dom-repeat" items="[[experimentList]]">
           <paper-button toggles raised name="[[item.id]]" class="red" on-click="handleChange">[[item.name]]</paper-button>
@@ -86,6 +89,10 @@ Key-value store for experimental data in Arlecchino
           type: Boolean,
           value: false,
           observer: "_dialogStateChange"
+        },
+        introMessage:{
+          type: Boolean,
+          value: true,
         }
       },
 
@@ -133,6 +140,7 @@ Key-value store for experimental data in Arlecchino
           that._updateExpList(experimentInput.name);
           expname.value = '';
           expfile.inputElement.value = '';
+          that.introMessage = false;
         };
 
         reader.readAsText(file);
