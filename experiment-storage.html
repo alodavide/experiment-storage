@@ -47,8 +47,6 @@ Key-value store for experimental data in Arlecchino
           <paper-button toggles raised name="[[item.id]]" class="red" on-click="handleChange">[[item.name]]</paper-button>
         </template>
       </paper-button-group>
-
-      <paper-button class="grey"  raised on-click="_changePopUpState">Add New Experiment</paper-button>
     </div>
     <paper-dialog id="dialogimport">
       <h2>Import a new Experiment</h2>
@@ -184,7 +182,7 @@ Key-value store for experimental data in Arlecchino
         }
       },
 
-      _changePopUpState: function(){
+      changePopUpState: function(){
         this.dialogOpenState = !this.dialogOpenState;
       },
 
