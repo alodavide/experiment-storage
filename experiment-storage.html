@@ -111,58 +111,54 @@ Key-value store for experimental data in Arlecchino
       },
 
       uploadExperiment: function(){
-        var experimentInput = {};
+
         var expname =this.$.expname;
         var expfile =this.$.expfile;
-
-        experimentInput.name = expname.value;
+        var that = this;
+        var reader = new FileReader();
         var file = expfile.inputElement.files[0];
 
-        var reader = new FileReader();
-        var changeStatePopUp = this.changePopUpState();
         reader.onload = function(e) {
-          // Print the contents of the file
-          var csvFile = e.target.result;
           var glycanList = [];
-          d3.csv.parse(csvFile, function(dataCSV) {
-
+          d3.csv.parse(e.target.result, function(dataCSV) {
             var glycan = new igVisualizer.Glycan(dataCSV);
             glycanList.push(glycan);
           });
 
-          experimentInput.data = _normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
+          var experimentInput = {};
+          experimentInput.name = expname.value;
+          experimentInput.data = that._normalizeData(igVisualizer.NetworkBuilder.buildJsonComposition(glycanList));
 
-          function _normalizeData(sankeydata){
-            sankeydata.nodes = sankeydata.nodes.map(function(x) {
-              return {
-                name: x[0].composition.toStringNoZeros(),
-                percentage: x[0].percentage,
-                size: x[0].composition.calculateSize(),
-                unicarbEncoding: x[0].composition.toUnicarbLongEncoding()
-              };
-            });
-
-            sankeydata.links = sankeydata.links.map(function(x) {
-              return {
-                source: x.source,
-                target: x.target,
-                difference: x.difference,
-                value: 1
-              };
-            });
-            return sankeydata;
-          }
+          localStorage.setItem('AID_'+that.experimentId, JSON.stringify(experimentInput));
+          that._updateExpList(experimentInput.name);
         };
 
         reader.readAsText(file);
-
-        localStorage.setItem('AID_'+this.experimentId, JSON.stringify(experimentInput));
-        this._updateExpList(experimentInput.name);
-
+        this.changePopUpState();
         expname.value = '';
         expfile.inputElement.value = '';
       },
 
+      _normalizeData: function (sankeydata){
+        sankeydata.nodes = sankeydata.nodes.map(function(x) {
+          return {
+            name: x[0].composition.toStringNoZeros(),
+            percentage: x[0].percentage,
+            size: x[0].composition.calculateSize(),
+            unicarbEncoding: x[0].composition.toUnicarbLongEncoding()
+          };
+        });
+
+        sankeydata.links = sankeydata.links.map(function(x) {
+          return {
+            source: x.source,
+            target: x.target,
+            difference: x.difference,
+            value: 1
+          };
+        });
+        return sankeydata;
+      },
 
       _updateExpList: function(experimentName){
         var experiment = {};
