@@ -7,9 +7,7 @@
     "app-storage": "PolymerElements/app-storage#^0.9.7",
     "paper-dialog": "PolymerElements/paper-dialog#^1.1.0",
     "paper-input": "PolymerElements/paper-input#^1.1.22",
-    "paper-button-group": "^0.0.1",
-    "paper-button": "^1.0.14",
-    "iron-selector": "PolymerElements/iron-selector#^1.5.2"
+    "paper-button": "^1.0.14"
   },
   "devDependencies": {
     "iron-component-page": "PolymerElements/iron-component-page#^1.0.0",
