@@ -11,7 +11,7 @@
 `experiment-storage`
 Key-value store for experimental data in Arlecchino
 
-@demo demo/index.html 
+@demo demo/index.html
 -->
 
 <dom-module id="experiment-storage">
@@ -90,8 +90,7 @@ Key-value store for experimental data in Arlecchino
       }
 
 
-</style>
-
+    </style>
 
     <div>
       <div class="drawer-list">
@@ -109,12 +108,41 @@ Key-value store for experimental data in Arlecchino
         <span class="sidenav-header">Demo</span>
         <a on-click="_loadDemoSession"> Load Demo Experiments</a>
       </div>
-      <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-        <p class="sidenav-header">Experiment List</p>
-        <template is="dom-repeat" items="[[experimentList]]">
-          <a name="[[item.id]]"  href="/tool/[[item.id]]">[[item.name]]</a>
-        </template>
-      </iron-selector>
+      <div class="drawer-list">
+        <span class="sidenav-header">Display Mode</span>
+        <a on-click="_displayIndividual" > Individual Display</a>
+        <a on-click="_displayDifference" > Differential Display</a>
+      </div>
+
+      <template is="dom-if" if="{{modeShow}}">
+        <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
+          <p class="sidenav-header">Experiment List</p>
+          <template is="dom-repeat" items="[[experimentList]]">
+            <a name="[[item.id]]"  href="/tool/show/[[item.id]]">[[item.name]]</a>
+          </template>
+        </iron-selector>
+      </template>
+
+
+      <template is="dom-if" if="{{!modeShow}}">
+        <!--//In the multi select you need to construct a link /tool/difference/id1_id2-->
+        <iron-selector selected="{{exp1}}" attr-for-selected="name" class="drawer-list">
+          <p class="sidenav-header">Select First Experiment</p>
+          <template is="dom-repeat" items="[[experimentList]]">
+            <a name="[[item.id]]" >[[item.name]]</a>
+          </template>
+        </iron-selector>
+
+        <iron-selector  selected="{{exp2}}" attr-for-selected="name" class="drawer-list" >
+          <p class="sidenav-header">Select Second Experiment</p>
+          <template is="dom-repeat" items="[[experimentList]]">
+            <a name="[[item.id]]" >[[item.name]]</a>
+          </template>
+        </iron-selector>
+
+      </template>
+
+
     </div>
     <paper-dialog id="dialogimport">
       <h2>Import a new Experiment</h2>
@@ -176,8 +204,21 @@ Key-value store for experimental data in Arlecchino
           type: Boolean,
           value: false,
           observer: "_sessionDialogStateChange"
-        }
+        },
 
+        // Must be a boolean for conditional template
+        modeShow:{
+          type:Boolean,
+          value: true
+        },
+
+        exp1:{
+          observer: '_differenceSelect'
+        },
+
+        exp2:{
+          observer: '_differenceSelect'
+        }
       },
 
 
@@ -213,7 +254,6 @@ Key-value store for experimental data in Arlecchino
 
         reader.onload = function(e) {
           var glycanMap = {};
-          var sumIntensity = 0;
           var experimentInput = {};
           experimentInput.name = expname.value;
 
@@ -221,16 +261,17 @@ Key-value store for experimental data in Arlecchino
             var glycan = new igVisualizer.Glycan(dataCSV);
             glycanMap[glycan.composition.toStringNoZeros()] = glycan;
           });
+
           var expCount = that.experimentList.length;
           if(expCount > 0){
             var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[expCount -1].id)).data;
             for(var i =0; i < lastExpData.nodes.length; i++){
               var node = lastExpData.nodes[i];
-                if(glycanMap[node.name]){
-                  node.percentage = glycanMap[node.name].percentage;
-                } else {
-                  node.percentage = -1;
-                }
+              if(glycanMap[node.name]){
+                node.percentage = glycanMap[node.name].percentage;
+              } else {
+                node.percentage = 'nottested';
+              }
             }
             experimentInput.data = lastExpData;
           } else {
@@ -238,7 +279,8 @@ Key-value store for experimental data in Arlecchino
           }
 
           localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
-          that._updateExpList(experimentInput.name);
+          that._updateExpList(experimentInput.name, that.experimentId);
+          that.experimentId++;
           expname.value = '';
           expfile.inputElement.value = '';
         };
@@ -247,14 +289,12 @@ Key-value store for experimental data in Arlecchino
         this.changeImportState();
       },
 
-      _updateExpList: function(experimentName){
+      _updateExpList: function(experimentName, experimentId){
         var experiment = {};
         experiment.name = experimentName;
-        experiment.id = 'GLYNSIGHTID_'+this.experimentId;
-
+        experiment.id = 'GLYNSIGHTID_'+experimentId;
         this.push('experimentList', experiment);
         localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
-        this.experimentId++;
       },
 
       _importDialogStateChange: function(newValue){
@@ -284,8 +324,9 @@ Key-value store for experimental data in Arlecchino
       _reloadFromCache: function(){
         var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
         for (var i = 0 ; i< cache.length; i++) {
-            this._updateExpList(cache[i].name);
+          this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
         }
+        this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
       },
 
       _lsTest: function(){
@@ -300,12 +341,12 @@ Key-value store for experimental data in Arlecchino
       },
 
       _selectedExperimentChanged: function (newValue) {
-        this.page = newValue.id;
+        this.page = newValue.exp;
       },
 
       _removeAll: function(){
         for(var i = 0; i< this.experimentList.length; i++){
-          localStorage.removeItem(this.experimentList[i].id);
+          localStorage.removeItem(this.experimentList[i].exp);
         }
         localStorage.removeItem("GlynsightExpList");
 
@@ -315,13 +356,15 @@ Key-value store for experimental data in Arlecchino
       },
 
       _removeExperiment: function(){
-        for(var i = 0; i< this.experimentList.length; i++){
-          if(this.experimentList[i].id == this.selectedExperiment.id){
-            localStorage.removeItem(this.experimentList[i].id);
-            this.splice('experimentList',i, 1);
-            localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
-            window.location = '/';
-            return;
+        if(this.modeShow) {
+          for (var i = 0; i < this.experimentList.length; i++) {
+            if (this.experimentList[i].id == this.page) {
+              localStorage.removeItem(this.experimentList[i].id);
+              this.splice('experimentList', i, 1);
+              localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
+              window.location = '/';
+              return;
+            }
           }
         }
       },
@@ -372,7 +415,7 @@ Key-value store for experimental data in Arlecchino
 
       _loadDemoSession: function(){
         var that = this;
-        d3.json(this.resolveUrl("./resources/glynsightSession.json"), function(data) {
+        d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
           that._removeAll();
           localStorage.setItem('GlynsightExpList',data.expList);
           for (var key in data) {
@@ -382,9 +425,26 @@ Key-value store for experimental data in Arlecchino
           }
           that._reloadFromCache();
         });
-      }
+      },
+      // mode = true it is equal to show, false = difference
+      _displayIndividual: function(){
+        this.modeShow = true;
+      },
 
+      _displayDifference: function(){
+        this.modeShow = false;
+      },
+
+      _differenceSelect: function(){
+        if(this.exp1 && this.exp2){
+          var firstExp = this.exp1.replace("GLYNSIGHTID_","");
+          var secondExp = this.exp2.replace("GLYNSIGHTID_","");
+          var link = document.createElement('a');
+          link.href = "/tool/difference/"+firstExp+"_"+secondExp;
+          document.body.appendChild(link);
+          link.click();
+        }
+      }
     });
   </script>
 </dom-module>
-
