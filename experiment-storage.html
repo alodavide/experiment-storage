@@ -15,437 +15,437 @@ Key-value store for experimental data in Arlecchino
 -->
 
 <dom-module id="experiment-storage">
-  <template>
-    <style>
-      :host {
-        display: block;
-      }
-
-      paper-button.red {
-        margin-bottom: 5px;
-        margin-top: 5px;
-        background-color: #e2011b;
-        color: white;
-      }
-
-      paper-button.grey {
-        margin-bottom: 5px;
-        margin-top: 5px;
-        background-color: var(--paper-grey-700);
-        color: white;
-      }
-
-      paper-dialog {
-        width:400px
-      }
-
-
-
-      .drawer-list a {
-        display: block;
-
-        padding: 0 16px;
-
-        text-decoration: none;
-
-        color: var(--app-secondary-color);
-
-        line-height: 40px;
-      }
-
-      .drawer-list a.iron-selected {
-        color: black;
-        font-weight: bold;
-      }
-
-      a:hover {
-        cursor:pointer;
-      }
-
-      .sidenav-header {
-        font-size:15px;
-        line-height:24px;
-        display:block;
-        padding:5px 30px;
-        border-left:4px solid transparent;
-      }
-
-
-
-      .sidenav-header{font-family:'Roboto Slab', 'Roboto', 'Noto', sans-serif;padding-top:15px;font-weight:bold;border-left:4px solid transparent;}
-
-      .sidenav-header:first-of-type{
-        margin-top:15px;
-        border-top:1px solid #eceff1;
-      }
-      .sidenav-endheader{
-        margin-top:15px;
-        border-bottom:1px solid #eceff1;
-      }
-
-      a.iron-selected {
-        color:black;
-        border-left:4px solid #e2011b;
-        color:#e2011b;
-      }
-
-
-    </style>
-
-    <div>
-      <div class="drawer-list">
-        <span class="sidenav-header">Menu</span>
-        <a on-click="changeImportState" class=""> Add Experiment</a>
-        <a on-click="_removeExperiment"> Remove Selected Experiment</a>
-        <a on-click="_removeAll"> Remove All Experiments</a>
-      </div>
-      <div class="drawer-list">
-        <span class="sidenav-header">Download</span>
-        <a on-click="_downloadSession"> Download Session</a>
-        <a on-click="changeSessionState"> Upload Session</a>
-      </div>
-      <div class="drawer-list">
-        <span class="sidenav-header">Demo</span>
-        <a on-click="_loadDemoSession"> Load Demo Experiments</a>
-      </div>
-      <div class="drawer-list">
-        <span class="sidenav-header">Display Mode</span>
-        <a on-click="_displayIndividual" > Individual Display</a>
-        <a on-click="_displayDifference" > Differential Display</a>
-      </div>
-
-      <template is="dom-if" if="{{modeShow}}">
-        <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
-          <p class="sidenav-header">Experiment List</p>
-          <template is="dom-repeat" items="[[experimentList]]">
-            <a name="[[item.id]]"  href="/tool/show/[[item.id]]">[[item.name]]</a>
-          </template>
-        </iron-selector>
-      </template>
-
-
-      <template is="dom-if" if="{{!modeShow}}">
-        <!--//In the multi select you need to construct a link /tool/difference/id1_id2-->
-        <iron-selector selected="{{exp1}}" attr-for-selected="name" class="drawer-list">
-          <p class="sidenav-header">Select First Experiment</p>
-          <template is="dom-repeat" items="[[experimentList]]">
-            <a name="[[item.id]]" >[[item.name]]</a>
-          </template>
-        </iron-selector>
-
-        <iron-selector  selected="{{exp2}}" attr-for-selected="name" class="drawer-list" >
-          <p class="sidenav-header">Select Second Experiment</p>
-          <template is="dom-repeat" items="[[experimentList]]">
-            <a name="[[item.id]]" >[[item.name]]</a>
-          </template>
-        </iron-selector>
-
-      </template>
-
-
-    </div>
-    <paper-dialog id="dialogimport">
-      <h2>Import a new Experiment</h2>
-      <div>
-        <paper-input id="expname" label="Experiment Name" required="true"></paper-input>
-        <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
-        <p>
-          <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
-          <paper-button raised class="red" on-click="changeImportState">Cancel</paper-button>
-        </p>
-      </div>
-    </paper-dialog>
-
-    <paper-dialog id="dialogSession">
-      <h2>Import a Session File</h2>
-      <div>
-        <paper-input id="sessionfile" label="Session File" type="file"></paper-input>
-        <p>
-          <paper-button raised class="grey" on-click="_uploadSession">Upload Session</paper-button>
-          <paper-button raised class="red" on-click="changeSessionState">Cancel</paper-button>
-        </p>
-      </div>
-    </paper-dialog>
-
-  </template>
-
-  <script>
-    Polymer({
-
-      is: 'experiment-storage',
-
-      properties: {
-
-        experimentList: {
-          type: Array,
-          value: function() { return []; }
-        },
-
-        selectedExperiment: {
-          type: Object,
-          reflectToAttribute: true,
-          observer: "_selectedExperimentChanged"
-
-        },
-
-        experimentId: {
-          type: Number,
-          reflectToAttribute: true,
-          value: 0
-        },
-
-        importDialogState:{
-          type: Boolean,
-          value: false,
-          observer: "_importDialogStateChange"
-        },
-
-        sessionDialogState:{
-          type: Boolean,
-          value: false,
-          observer: "_sessionDialogStateChange"
-        },
-
-        // Must be a boolean for conditional template
-        modeShow:{
-          type:Boolean,
-          value: true
-        },
-
-        exp1:{
-          observer: '_differenceSelect'
-        },
-
-        exp2:{
-          observer: '_differenceSelect'
-        }
-      },
-
-
-
-      created: function(){
-        if(this._lsTest() === true) {
-          console.log("LocalStorage check: success");
-        } else {
-          alert('The LocalStorage is not supported in this browser.');
-        }
-
-        if (window.File && window.FileReader && window.FileList && window.Blob) {
-          console.log("File APIs check: success");
-        } else {
-          alert('The File APIs are not fully supported in this browser.');
-        }
-        //todo: fix loading d3. Must be loaded only if is not present.
-      },
-
-      attached: function(){
-        if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
-          this._reloadFromCache();
-        }
-      },
-
-      uploadExperiment: function(){
-        var expname =this.$.expname;
-        var expfile =this.$.expfile;
-        var that = this;
-        var reader = new FileReader();
-        var file = expfile.inputElement.files[0];
-
-
-        reader.onload = function(e) {
-          var glycanMap = {};
-          var experimentInput = {};
-          experimentInput.name = expname.value;
-
-          d3.csv.parse(e.target.result, function(dataCSV) {
-            var glycan = new igVisualizer.Glycan(dataCSV);
-            glycanMap[glycan.composition.toStringNoZeros()] = glycan;
-          });
-
-          var expCount = that.experimentList.length;
-          if(expCount > 0){
-            var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[expCount -1].id)).data;
-            for(var i =0; i < lastExpData.nodes.length; i++){
-              var node = lastExpData.nodes[i];
-              if(glycanMap[node.name]){
-                node.percentage = glycanMap[node.name].percentage;
-              } else {
-                node.percentage = 'nottested';
-              }
+    <template>
+        <style>
+            :host {
+                display: block;
             }
-            experimentInput.data = lastExpData;
-          } else {
-            experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
-          }
 
-          localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
-          that._updateExpList(experimentInput.name, that.experimentId);
-          that.experimentId++;
-          expname.value = '';
-          expfile.inputElement.value = '';
-        };
-
-        reader.readAsText(file);
-        this.changeImportState();
-      },
-
-      _updateExpList: function(experimentName, experimentId){
-        var experiment = {};
-        experiment.name = experimentName;
-        experiment.id = 'GLYNSIGHTID_'+experimentId;
-        this.push('experimentList', experiment);
-        localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
-      },
-
-      _importDialogStateChange: function(newValue){
-        if(newValue){
-          this.$.dialogimport.open();
-        } else{
-          this.$.dialogimport.close();
-        }
-      },
-
-      _sessionDialogStateChange: function(newValue){
-        if(newValue){
-          this.$.dialogSession.open();
-        } else{
-          this.$.dialogSession.close();
-        }
-      },
-
-      changeImportState: function(){
-        this.importDialogState = !this.importDialogState;
-      },
-
-      changeSessionState: function(){
-        this.sessionDialogState = !this.sessionDialogState;
-      },
-
-      _reloadFromCache: function(){
-        var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
-        for (var i = 0 ; i< cache.length; i++) {
-          this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
-        }
-        this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
-      },
-
-      _lsTest: function(){
-        var test = 'test';
-        try {
-          localStorage.setItem(test, test);
-          localStorage.removeItem(test);
-          return true;
-        } catch(e) {
-          return false;
-        }
-      },
-
-      _selectedExperimentChanged: function (newValue) {
-        this.page = newValue.exp;
-      },
-
-      _removeAll: function(){
-        for(var i = 0; i< this.experimentList.length; i++){
-          localStorage.removeItem(this.experimentList[i].exp);
-        }
-        localStorage.removeItem("GlynsightExpList");
-
-        this.selectedExperiment = {};
-        this.experimentList = [];
-        window.location = '/';
-      },
-
-      _removeExperiment: function(){
-        if(this.modeShow) {
-          for (var i = 0; i < this.experimentList.length; i++) {
-            if (this.experimentList[i].id == this.page) {
-              localStorage.removeItem(this.experimentList[i].id);
-              this.splice('experimentList', i, 1);
-              localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
-              window.location = '/';
-              return;
+            paper-button.red {
+                margin-bottom: 5px;
+                margin-top: 5px;
+                background-color: #e2011b;
+                color: white;
             }
-          }
-        }
-      },
 
-      _downloadSession: function(){
-
-        var session = {};
-        session.expList = localStorage.getItem('GlynsightExpList');
-
-        for(var i = 0; i< this.experimentList.length; i++){
-          var id = this.experimentList[i].id;
-          session[id] = localStorage.getItem(this.experimentList[i].id);
-        }
-
-        var dataSession = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session));
-        var downloadLink = document.createElement("a");
-
-        downloadLink.setAttribute("href",dataSession);
-        downloadLink.setAttribute("download", "glynsightSession.json");
-        downloadLink.target = "_blank";
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-      },
-
-      _uploadSession: function(){
-        var sessionfile = this.$.sessionfile;
-        var that = this;
-        var reader = new FileReader();
-        var file = sessionfile.inputElement.files[0];
-
-        reader.onload = function(e) {
-          that._removeAll();
-          var dump = JSON.parse(e.target.result);
-          localStorage.setItem('GlynsightExpList',dump.expList);
-          for (var key in dump) {
-            if(key != 'list'){
-              localStorage.setItem(key,dump[key]);
+            paper-button.grey {
+                margin-bottom: 5px;
+                margin-top: 5px;
+                background-color: var(--paper-grey-700);
+                color: white;
             }
-          }
-          that._reloadFromCache();
-        };
 
-
-        reader.readAsText(file);
-        this.changeSessionState();
-      },
-
-      _loadDemoSession: function(){
-        var that = this;
-        d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
-          that._removeAll();
-          localStorage.setItem('GlynsightExpList',data.expList);
-          for (var key in data) {
-            if(key != 'list'){
-              localStorage.setItem(key,data[key]);
+            paper-dialog {
+                width:400px
             }
-          }
-          that._reloadFromCache();
+
+
+
+            .drawer-list a {
+                display: block;
+
+                padding: 0 16px;
+
+                text-decoration: none;
+
+                color: var(--app-secondary-color);
+
+                line-height: 40px;
+            }
+
+            .drawer-list a.iron-selected {
+                color: black;
+                font-weight: bold;
+            }
+
+            a:hover {
+                cursor:pointer;
+            }
+
+            .sidenav-header {
+                font-size:15px;
+                line-height:24px;
+                display:block;
+                padding:5px 30px;
+                border-left:4px solid transparent;
+            }
+
+
+
+            .sidenav-header{font-family:'Roboto Slab', 'Roboto', 'Noto', sans-serif;padding-top:15px;font-weight:bold;border-left:4px solid transparent;}
+
+            .sidenav-header:first-of-type{
+                margin-top:15px;
+                border-top:1px solid #eceff1;
+            }
+            .sidenav-endheader{
+                margin-top:15px;
+                border-bottom:1px solid #eceff1;
+            }
+
+            a.iron-selected {
+                color:black;
+                border-left:4px solid #e2011b;
+                color:#e2011b;
+            }
+
+
+        </style>
+
+        <div>
+            <div class="drawer-list">
+                <span class="sidenav-header">Menu</span>
+                <a on-click="changeImportState" class=""> Add Experiment</a>
+                <a on-click="_removeExperiment"> Remove Selected Experiment</a>
+                <a on-click="_removeAll"> Remove All Experiments</a>
+            </div>
+            <div class="drawer-list">
+                <span class="sidenav-header">Download</span>
+                <a on-click="_downloadSession"> Download Session</a>
+                <a on-click="changeSessionState"> Upload Session</a>
+            </div>
+            <div class="drawer-list">
+                <span class="sidenav-header">Demo</span>
+                <a on-click="_loadDemoSession"> Load Demo Experiments</a>
+            </div>
+            <div class="drawer-list">
+                <span class="sidenav-header">Display Mode</span>
+                <a on-click="_displayIndividual" > Individual Display</a>
+                <a on-click="_displayDifference" > Differential Display</a>
+            </div>
+
+            <template is="dom-if" if="{{modeShow}}">
+                <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
+                    <p class="sidenav-header">Experiment List</p>
+                    <template is="dom-repeat" items="[[experimentList]]">
+                        <a name="[[item.id]]"  href="/tool/show/[[item.id]]">[[item.name]]</a>
+                    </template>
+                </iron-selector>
+            </template>
+
+
+            <template is="dom-if" if="{{!modeShow}}">
+                <!--//In the multi select you need to construct a link /tool/difference/id1_id2-->
+                <iron-selector selected="{{exp1}}" attr-for-selected="name" class="drawer-list">
+                    <p class="sidenav-header">Select First Experiment</p>
+                    <template is="dom-repeat" items="[[experimentList]]">
+                        <a name="[[item.id]]" >[[item.name]]</a>
+                    </template>
+                </iron-selector>
+
+                <iron-selector  selected="{{exp2}}" attr-for-selected="name" class="drawer-list" >
+                    <p class="sidenav-header">Select Second Experiment</p>
+                    <template is="dom-repeat" items="[[experimentList]]">
+                        <a name="[[item.id]]" >[[item.name]]</a>
+                    </template>
+                </iron-selector>
+
+            </template>
+
+
+        </div>
+        <paper-dialog id="dialogimport">
+            <h2>Import a new Experiment</h2>
+            <div>
+                <paper-input id="expname" label="Experiment Name" required="true"></paper-input>
+                <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
+                <p>
+                    <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
+                    <paper-button raised class="red" on-click="changeImportState">Cancel</paper-button>
+                </p>
+            </div>
+        </paper-dialog>
+
+        <paper-dialog id="dialogSession">
+            <h2>Import a Session File</h2>
+            <div>
+                <paper-input id="sessionfile" label="Session File" type="file"></paper-input>
+                <p>
+                    <paper-button raised class="grey" on-click="_uploadSession">Upload Session</paper-button>
+                    <paper-button raised class="red" on-click="changeSessionState">Cancel</paper-button>
+                </p>
+            </div>
+        </paper-dialog>
+
+    </template>
+
+    <script>
+        Polymer({
+
+            is: 'experiment-storage',
+
+            properties: {
+
+                experimentList: {
+                    type: Array,
+                    value: function() { return []; }
+                },
+
+                selectedExperiment: {
+                    type: Object,
+                    reflectToAttribute: true,
+                    observer: "_selectedExperimentChanged"
+
+                },
+
+                experimentId: {
+                    type: Number,
+                    reflectToAttribute: true,
+                    value: 0
+                },
+
+                importDialogState:{
+                    type: Boolean,
+                    value: false,
+                    observer: "_importDialogStateChange"
+                },
+
+                sessionDialogState:{
+                    type: Boolean,
+                    value: false,
+                    observer: "_sessionDialogStateChange"
+                },
+
+                // Must be a boolean for conditional template
+                modeShow:{
+                    type:Boolean,
+                    value: true
+                },
+
+                exp1:{
+                    observer: '_differenceSelect'
+                },
+
+                exp2:{
+                    observer: '_differenceSelect'
+                }
+            },
+
+
+
+            created: function(){
+                if(this._lsTest() === true) {
+                    console.log("LocalStorage check: success");
+                } else {
+                    alert('The LocalStorage is not supported in this browser.');
+                }
+
+                if (window.File && window.FileReader && window.FileList && window.Blob) {
+                    console.log("File APIs check: success");
+                } else {
+                    alert('The File APIs are not fully supported in this browser.');
+                }
+                //todo: fix loading d3. Must be loaded only if is not present.
+            },
+
+            attached: function(){
+                if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
+                    this._reloadFromCache();
+                }
+            },
+
+            uploadExperiment: function(){
+                var expname =this.$.expname;
+                var expfile =this.$.expfile;
+                var that = this;
+                var reader = new FileReader();
+                var file = expfile.inputElement.files[0];
+
+
+                reader.onload = function(e) {
+                    var glycanMap = {};
+                    var experimentInput = {};
+                    experimentInput.name = expname.value;
+
+                    d3.csv.parse(e.target.result, function(dataCSV) {
+                        var glycan = new igVisualizer.Glycan(dataCSV);
+                        glycanMap[glycan.composition.toStringNoZeros()] = glycan;
+                    });
+
+                    var expCount = that.experimentList.length;
+                    if(expCount > 0){
+                        var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[expCount -1].id)).data;
+                        for(var i =0; i < lastExpData.nodes.length; i++){
+                            var node = lastExpData.nodes[i];
+                            if(glycanMap[node.name]){
+                                node.percentage = glycanMap[node.name].percentage;
+                            } else {
+                                node.percentage = 'nottested';
+                            }
+                        }
+                        experimentInput.data = lastExpData;
+                    } else {
+                        experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
+                    }
+
+                    localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
+                    that._updateExpList(experimentInput.name, that.experimentId);
+                    that.experimentId++;
+                    expname.value = '';
+                    expfile.inputElement.value = '';
+                };
+
+                reader.readAsText(file);
+                this.changeImportState();
+            },
+
+            _updateExpList: function(experimentName, experimentId){
+                var experiment = {};
+                experiment.name = experimentName;
+                experiment.id = 'GLYNSIGHTID_'+experimentId;
+                this.push('experimentList', experiment);
+                localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
+            },
+
+            _importDialogStateChange: function(newValue){
+                if(newValue){
+                    this.$.dialogimport.open();
+                } else{
+                    this.$.dialogimport.close();
+                }
+            },
+
+            _sessionDialogStateChange: function(newValue){
+                if(newValue){
+                    this.$.dialogSession.open();
+                } else{
+                    this.$.dialogSession.close();
+                }
+            },
+
+            changeImportState: function(){
+                this.importDialogState = !this.importDialogState;
+            },
+
+            changeSessionState: function(){
+                this.sessionDialogState = !this.sessionDialogState;
+            },
+
+            _reloadFromCache: function(){
+                var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
+                for (var i = 0 ; i< cache.length; i++) {
+                    this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
+                }
+                this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
+            },
+
+            _lsTest: function(){
+                var test = 'test';
+                try {
+                    localStorage.setItem(test, test);
+                    localStorage.removeItem(test);
+                    return true;
+                } catch(e) {
+                    return false;
+                }
+            },
+
+            _selectedExperimentChanged: function (newValue) {
+                this.page = newValue.exp;
+            },
+
+            _removeAll: function(){
+                for(var i = 0; i< this.experimentList.length; i++){
+                    localStorage.removeItem(this.experimentList[i].exp);
+                }
+                localStorage.removeItem("GlynsightExpList");
+
+                this.selectedExperiment = {};
+                this.experimentList = [];
+                window.location = '/';
+            },
+
+            _removeExperiment: function(){
+                if(this.modeShow) {
+                    for (var i = 0; i < this.experimentList.length; i++) {
+                        if (this.experimentList[i].id == this.page) {
+                            localStorage.removeItem(this.experimentList[i].id);
+                            this.splice('experimentList', i, 1);
+                            localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
+                            window.location = '/';
+                            return;
+                        }
+                    }
+                }
+            },
+
+            _downloadSession: function(){
+
+                var session = {};
+                session.expList = localStorage.getItem('GlynsightExpList');
+
+                for(var i = 0; i< this.experimentList.length; i++){
+                    var id = this.experimentList[i].id;
+                    session[id] = localStorage.getItem(this.experimentList[i].id);
+                }
+
+                var dataSession = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session));
+                var downloadLink = document.createElement("a");
+
+                downloadLink.setAttribute("href",dataSession);
+                downloadLink.setAttribute("download", "glynsightSession.json");
+                downloadLink.target = "_blank";
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+            },
+
+            _uploadSession: function(){
+                var sessionfile = this.$.sessionfile;
+                var that = this;
+                var reader = new FileReader();
+                var file = sessionfile.inputElement.files[0];
+
+                reader.onload = function(e) {
+                    that._removeAll();
+                    var dump = JSON.parse(e.target.result);
+                    localStorage.setItem('GlynsightExpList',dump.expList);
+                    for (var key in dump) {
+                        if(key != 'list'){
+                            localStorage.setItem(key,dump[key]);
+                        }
+                    }
+                    that._reloadFromCache();
+                };
+
+
+                reader.readAsText(file);
+                this.changeSessionState();
+            },
+
+            _loadDemoSession: function(){
+                var that = this;
+                d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
+                    that._removeAll();
+                    localStorage.setItem('GlynsightExpList',data.expList);
+                    for (var key in data) {
+                        if(key != 'list'){
+                            localStorage.setItem(key,data[key]);
+                        }
+                    }
+                    that._reloadFromCache();
+                });
+            },
+            // mode = true it is equal to show, false = difference
+            _displayIndividual: function(){
+                this.modeShow = true;
+            },
+
+            _displayDifference: function(){
+                this.modeShow = false;
+            },
+
+            _differenceSelect: function(){
+                if(this.exp1 && this.exp2){
+                    var firstExp = this.exp1.replace("GLYNSIGHTID_","");
+                    var secondExp = this.exp2.replace("GLYNSIGHTID_","");
+                    var link = document.createElement('a');
+                    link.href = "/tool/difference/"+firstExp+"_"+secondExp;
+                    document.body.appendChild(link);
+                    link.click();
+                }
+            }
         });
-      },
-      // mode = true it is equal to show, false = difference
-      _displayIndividual: function(){
-        this.modeShow = true;
-      },
-
-      _displayDifference: function(){
-        this.modeShow = false;
-      },
-
-      _differenceSelect: function(){
-        if(this.exp1 && this.exp2){
-          var firstExp = this.exp1.replace("GLYNSIGHTID_","");
-          var secondExp = this.exp2.replace("GLYNSIGHTID_","");
-          var link = document.createElement('a');
-          link.href = "/tool/difference/"+firstExp+"_"+secondExp;
-          document.body.appendChild(link);
-          link.click();
-        }
-      }
-    });
-  </script>
+    </script>
 </dom-module>
 
