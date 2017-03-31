@@ -1,11 +1,11 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
 <link rel="import" href="../paper-input/paper-input.html">
-<link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../iron-selector/iron-selector.html">
+<link rel="import" href="../vaadin-upload/vaadin-upload.html">
+<link rel="import" href="../paper-dialog-scrollable/paper-dialog-scrollable.html">
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
-<script type="text/javascript" src="../d3/d3.min.js"></script>
 
 <!--
 `experiment-storage`
@@ -36,10 +36,24 @@ Key-value store for experimental data in Arlecchino
             }
 
             paper-dialog {
-                width:400px
+                width:600px
             }
 
+            vaadin-upload.thick-border {
+                --primary-color: grey;
+                --dark-primary-color: #063;
+                --light-primary-color: #6c9;
+                --error-color: #e2011b;
 
+                border: 2px solid #ccc;
+                padding: 14px;
+                background: #eee;
+                border-radius: 0;
+            }
+
+            vaadin-upload.thick-border[dragover] {
+                border-color: #396;
+            }
 
             .drawer-list a {
                 display: block;
@@ -89,13 +103,17 @@ Key-value store for experimental data in Arlecchino
                 color:#e2011b;
             }
 
+            .scrollheight{
+                height: 300px;
+            }
 
         </style>
 
         <div>
             <div class="drawer-list">
                 <span class="sidenav-header">Menu</span>
-                <a on-click="changeImportState" class=""> Add Experiment</a>
+                <a on-click="changeBulkImportState"> Import Experiments</a>
+                <a on-click="changeRenameDialogState"> Rename Experiments</a>
                 <a on-click="_removeExperiment"> Remove Selected Experiment</a>
                 <a on-click="_removeAll"> Remove All Experiments</a>
             </div>
@@ -114,10 +132,11 @@ Key-value store for experimental data in Arlecchino
                 <a on-click="_displayDifference" > Differential Display</a>
             </div>
 
+
             <template is="dom-if" if="{{modeShow}}">
-                <iron-selector selected="[[page]]" attr-for-selected="name" class="drawer-list" role="navigation">
+                <iron-selector selected="[[singleExperiment]]" attr-for-selected="name" class="drawer-list" role="navigation">
                     <p class="sidenav-header">Experiment List</p>
-                    <template is="dom-repeat" items="[[experimentList]]">
+                    <template is="dom-repeat" items="{{experimentList}}">
                         <a name="[[item.id]]"  href="/tool/show/[[item.id]]">[[item.name]]</a>
                     </template>
                 </iron-selector>
@@ -139,21 +158,21 @@ Key-value store for experimental data in Arlecchino
                         <a name="[[item.id]]" >[[item.name]]</a>
                     </template>
                 </iron-selector>
-
             </template>
-
-
         </div>
-        <paper-dialog id="dialogimport">
-            <h2>Import a new Experiment</h2>
+
+
+        <paper-dialog id="changeExpName">
+            <h2>Change Experiment Names</h2>
             <div>
-                <paper-input id="expname" label="Experiment Name" required="true"></paper-input>
-                <paper-input id="expfile" label="Experiment File" type="file"></paper-input>
-                <p>
-                    <paper-button raised class="grey" on-click="uploadExperiment">Upload Experiment</paper-button>
-                    <paper-button raised class="red" on-click="changeImportState">Cancel</paper-button>
-                </p>
+                <template is="dom-repeat" items="[[experimentList]]">
+                    <paper-input label="Previous Experiment Name: [[item.name]]" value="[[item.name]]" name="[[item.id]]"></paper-input>
+                </template>
             </div>
+            <p>
+                <paper-button raised class="grey" on-click="_saveExpName">Update Experiment Names</paper-button>
+                <paper-button raised class="red" on-click="changeRenameDialogState">Cancel</paper-button>
+            </p>
         </paper-dialog>
 
         <paper-dialog id="dialogSession">
@@ -166,6 +185,25 @@ Key-value store for experimental data in Arlecchino
                 </p>
             </div>
         </paper-dialog>
+
+        <paper-dialog id="bulkUpload">
+            <h2>Import a set of Experiments</h2>
+            <h3 style="color: #f40303">Important: Filenames will be used as experiment names.</h3>
+            <div>
+                <paper-dialog-scrollable class="scrollheight">
+                    <vaadin-upload id="bUpload" class="thick-border" accept="text/csv" on-upload-before="uploadExperiment">
+                        <div class="drop-label">
+                            <iron-icon icon="description"></iron-icon>
+                            Drop your Experiments here. (Only CSV files)
+                        </div>
+                    </vaadin-upload>
+                </paper-dialog-scrollable>
+                <p>
+                    <paper-button raised class="grey" on-click="resetUpload">Finish Upload</paper-button>
+                </p>
+            </div>
+        </paper-dialog>
+
 
     </template>
 
@@ -181,12 +219,6 @@ Key-value store for experimental data in Arlecchino
                     value: function() { return []; }
                 },
 
-                selectedExperiment: {
-                    type: Object,
-                    reflectToAttribute: true,
-                    observer: "_selectedExperimentChanged"
-
-                },
 
                 experimentId: {
                     type: Number,
@@ -194,10 +226,16 @@ Key-value store for experimental data in Arlecchino
                     value: 0
                 },
 
-                importDialogState:{
+                renameDialogState:{
                     type: Boolean,
                     value: false,
-                    observer: "_importDialogStateChange"
+                    observer: "_renameDialogStateChange"
+                },
+
+                bulkImportDialogState:{
+                    type: Boolean,
+                    value: false,
+                    observer: "_bulkImportDialogStateChange"
                 },
 
                 sessionDialogState:{
@@ -242,51 +280,79 @@ Key-value store for experimental data in Arlecchino
                 if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
                     this._reloadFromCache();
                 }
+
+                if(this.selectedExperiment.mode =='show'){
+                    this.singleExperiment = this.selectedExperiment.exp;
+                }
+
+                if(this.selectedExperiment.mode =='difference'){
+                    var exp = this.selectedExperiment.exp.split('_');
+                    this.exp1 = 'GLYNSIGHTID_'+exp[0];
+                    this.exp2 = 'GLYNSIGHTID_'+exp[1];
+                    this._displayDifference();
+                }
             },
 
-            uploadExperiment: function(){
-                var expname =this.$.expname;
-                var expfile =this.$.expfile;
+            uploadExperiment: function(event){
+
+                event.preventDefault();
+
+                event.preventDefault();
+                var upload = this.$.bUpload;
+                var file = event.detail.file;
+
                 var that = this;
                 var reader = new FileReader();
-                var file = expfile.inputElement.files[0];
-
 
                 reader.onload = function(e) {
                     var glycanMap = {};
                     var experimentInput = {};
-                    experimentInput.name = expname.value;
+
+                    experimentInput.name = file.name.slice(0, -4);
 
                     d3.csv.parse(e.target.result, function(dataCSV) {
+                        if(!dataCSV.composition || !dataCSV.percentage){
+                            upload.set(['files', upload.files.indexOf(file), 'error'], 'Header Error. Composition or Percentage column missing.');
+                            return;
+                        }
                         var glycan = new igVisualizer.Glycan(dataCSV);
                         glycanMap[glycan.composition.toStringNoZeros()] = glycan;
                     });
 
-                    var expCount = that.experimentList.length;
-                    if(expCount > 0){
-                        var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[expCount -1].id)).data;
-                        for(var i =0; i < lastExpData.nodes.length; i++){
-                            var node = lastExpData.nodes[i];
-                            if(glycanMap[node.name]){
-                                node.percentage = glycanMap[node.name].percentage;
-                            } else {
-                                node.percentage = 'nottested';
-                            }
-                        }
-                        experimentInput.data = lastExpData;
-                    } else {
-                        experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
+                    if(Object.keys(glycanMap).length === 0 && glycanMap.constructor === Object){
+                        upload.set(['files', fileIndex, 'error'], 'No data in the uploaded file.');
+                        return;
                     }
 
-                    localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
-                    that._updateExpList(experimentInput.name, that.experimentId);
-                    that.experimentId++;
-                    expname.value = '';
-                    expfile.inputElement.value = '';
+                    try {
+                        //Check if there is an experiment.
+                        if(that.experimentList[0]){
+                            var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[0].id)).data;
+                            for(var i =0; i < lastExpData.nodes.length; i++){
+                                var node = lastExpData.nodes[i];
+                                if(glycanMap[node.name]){
+                                    node.percentage = glycanMap[node.name].percentage;
+                                } else {
+                                    node.percentage = 'nottested';
+                                }
+                            }
+                            experimentInput.data = lastExpData;
+                        } else {
+                            experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
+                        }
+                        localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
+                        that._updateExpList(experimentInput.name, that.experimentId);
+                        that.experimentId++;
+                        if(!upload.get(['files', upload.files.indexOf(file), 'abort'])){
+                            upload.set(['files', upload.files.indexOf(file), 'progress'], 100);
+                            upload.set(['files', upload.files.indexOf(file), 'complete'], true);
+                        }
+                    } catch(e){
+                        upload.set(['files', fileIndex, 'error'], 'Cannot Process this file. File Corrupted');
+                    }
                 };
 
                 reader.readAsText(file);
-                this.changeImportState();
             },
 
             _updateExpList: function(experimentName, experimentId){
@@ -297,11 +363,19 @@ Key-value store for experimental data in Arlecchino
                 localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
             },
 
-            _importDialogStateChange: function(newValue){
+            _renameDialogStateChange: function(newValue){
                 if(newValue){
-                    this.$.dialogimport.open();
+                    this.$.changeExpName.open();
                 } else{
-                    this.$.dialogimport.close();
+                    this.$.changeExpName.close();
+                }
+            },
+
+            _bulkImportDialogStateChange: function(newValue){
+                if(newValue){
+                    this.$.bulkUpload.open();
+                } else{
+                    this.$.bulkUpload.close();
                 }
             },
 
@@ -313,8 +387,17 @@ Key-value store for experimental data in Arlecchino
                 }
             },
 
-            changeImportState: function(){
-                this.importDialogState = !this.importDialogState;
+            changeRenameDialogState: function(){
+                this.renameDialogState = !this.renameDialogState;
+            },
+
+            changeBulkImportState: function(){
+                this.bulkImportDialogState = !this.bulkImportDialogState;
+            },
+
+            resetUpload: function(){
+                this.$.bUpload.files = [];
+                this.changeBulkImportState();
             },
 
             changeSessionState: function(){
@@ -340,9 +423,6 @@ Key-value store for experimental data in Arlecchino
                 }
             },
 
-            _selectedExperimentChanged: function (newValue) {
-                this.page = newValue.exp;
-            },
 
             _removeAll: function(){
                 for(var i = 0; i< this.experimentList.length; i++){
@@ -350,7 +430,6 @@ Key-value store for experimental data in Arlecchino
                 }
                 localStorage.removeItem("GlynsightExpList");
 
-                this.selectedExperiment = {};
                 this.experimentList = [];
                 window.location = '/';
             },
@@ -358,7 +437,7 @@ Key-value store for experimental data in Arlecchino
             _removeExperiment: function(){
                 if(this.modeShow) {
                     for (var i = 0; i < this.experimentList.length; i++) {
-                        if (this.experimentList[i].id == this.page) {
+                        if (this.experimentList[i].id == this.selectedExperiment.exp) {
                             localStorage.removeItem(this.experimentList[i].id);
                             this.splice('experimentList', i, 1);
                             localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
@@ -443,6 +522,31 @@ Key-value store for experimental data in Arlecchino
                     link.href = "/tool/difference/"+firstExp+"_"+secondExp;
                     document.body.appendChild(link);
                     link.click();
+                }
+            },
+
+            _saveExpName: function(){
+                var inputs = this.$.changeExpName.querySelectorAll('paper-input');
+                for (var i = 0; i < inputs.length; ++i) {
+                    this._updateExperimentName(inputs[i].name,inputs[i].value);
+                }
+                this.changeRenameDialogState();
+            },
+
+            _updateExperimentName: function(id,name){
+                for (var i = 0; i < this.experimentList.length; i++) {
+                    if (this.experimentList[i].id == id && this.experimentList[i].name != name) {
+                        //Update Experiment List
+                        this.experimentList[i].name = name;
+                        localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
+                        var expData = JSON.parse(localStorage.getItem(this.experimentList[i].id));
+                        //Update Experiment
+                        expData.name = name;
+                        localStorage.setItem(this.experimentList[i].id,JSON.stringify(expData));
+                        //Force Polymer to reevaluate array
+                        this.set('experimentList', []);
+                        this.set('experimentList', JSON.parse(localStorage.getItem('GlynsightExpList')));
+                    }
                 }
             }
         });
