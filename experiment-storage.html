@@ -2,8 +2,13 @@
 <link rel="import" href="../paper-dialog/paper-dialog.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../iron-selector/iron-selector.html">
+<link rel="import" href="../iron-collapse/iron-collapse.html">
 <link rel="import" href="../vaadin-upload/vaadin-upload.html">
 <link rel="import" href="../paper-dialog-scrollable/paper-dialog-scrollable.html">
+<link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../iron-icons/iron-icons.html">
+<link rel="import" href="../iron-flex-layout/classes/iron-flex-layout.html">
+
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
 
@@ -16,7 +21,7 @@ Key-value store for experimental data in Arlecchino
 
 <dom-module id="experiment-storage">
     <template>
-        <style>
+        <style include="iron-flex iron-flex-alignment">
             :host {
                 display: block;
             }
@@ -106,33 +111,68 @@ Key-value store for experimental data in Arlecchino
             .scrollheight{
                 height: 300px;
             }
+            .spanPadding{
+                padding-top: 7px;
+            }
+
+            paper-icon-button {
+                transition: transform .5s cubic-bezier(.4, 0, .2, 1);
+            }
+
+            [upside-down] {
+                transform: rotate(180deg);
+            }
 
         </style>
 
         <div>
             <div class="drawer-list">
-                <span class="sidenav-header">Menu</span>
-                <a on-click="changeBulkImportState"> Import Experiments</a>
-                <a on-click="changeRenameDialogState"> Rename Experiments</a>
-                <a on-click="_removeExperiment"> Remove Selected Experiment</a>
-                <a on-click="_removeAll"> Remove All Experiments</a>
+                <div class="sidenav-header horizontal layout" on-tap="toggleMenu">
+                    <span class="flex spanPadding">Menu</span><paper-icon-button id="menuIcon" icon="expand-more"></paper-icon-button>
+                </div>
+                <iron-collapse id="menu">
+                    <a on-click="changeBulkImportState">Home</a>
+                    <a on-click="changeRenameDialogState">About</a>
+                    <a on-click="_removeExperiment">Contact</a>
+                </iron-collapse>
             </div>
             <div class="drawer-list">
-                <span class="sidenav-header">Download</span>
-                <a on-click="_downloadSession"> Download Session</a>
-                <a on-click="changeSessionState"> Upload Session</a>
+                <div class="sidenav-header horizontal layout" on-tap="toggleExperiment">
+                    <span class="flex spanPadding">Manage Experiment</span><paper-icon-button id="experimentIcon" icon="expand-more"></paper-icon-button>
+                </div>
+                <iron-collapse id="experimentMenu">
+                    <a on-click="changeBulkImportState"> Import Experiments</a>
+                    <a on-click="changeRenameDialogState"> Rename Experiments</a>
+                    <a on-click="_removeExperiment"> Remove Selected Experiment</a>
+                    <a on-click="_removeAll"> Remove All Experiments</a>
+                </iron-collapse>
             </div>
             <div class="drawer-list">
-                <span class="sidenav-header">Demo</span>
-                <a on-click="_loadDemoSession"> Load Demo Experiments</a>
+                <div class="sidenav-header horizontal layout" on-tap="toggleSession">
+                    <span class="flex spanPadding">Manage Session</span><paper-icon-button id="sessionIcon" icon="expand-more"></paper-icon-button>
+                </div>
+                <iron-collapse id="sessionMenu">
+                    <a on-click="_downloadSession"> Download Session</a>
+                    <a on-click="changeSessionState"> Upload Session</a>
+                </iron-collapse>
             </div>
             <div class="drawer-list">
-                <span class="sidenav-header">Display Mode</span>
-                <a on-click="_displayIndividual" > Individual Display</a>
-                <a on-click="_displayDifference" > Differential Display</a>
+                <div class="sidenav-header horizontal layout" on-tap="toggleDemo">
+                    <span class="flex spanPadding">Demo</span><paper-icon-button id="demoIcon" icon="expand-more"></paper-icon-button>
+                </div>
+                <iron-collapse id="demoMenu">
+                    <a on-click="_loadDemoSession"> Load Demo Experiments</a>
+                </iron-collapse>
             </div>
-
-
+            <div class="drawer-list">
+                <div class="sidenav-header horizontal layout" on-tap="toggleDisplay">
+                    <span class="flex spanPadding">Display Mode</span><paper-icon-button id="displayIcon" icon="expand-more"></paper-icon-button>
+                </div>
+                <iron-collapse id="displayMenu">
+                    <a on-click="_displayIndividual"> Individual Display</a>
+                    <a on-click="_displayDifference"> Differential Display</a>
+                </iron-collapse>
+            </div>
             <template is="dom-if" if="{{modeShow}}">
                 <iron-selector selected="[[singleExperiment]]" attr-for-selected="name" class="drawer-list" role="navigation">
                     <p class="sidenav-header">Experiment List</p>
@@ -548,7 +588,49 @@ Key-value store for experimental data in Arlecchino
                         this.set('experimentList', JSON.parse(localStorage.getItem('GlynsightExpList')));
                     }
                 }
+            },
+
+            toggleExperiment: function(){
+                this.$.experimentMenu.toggle();
+                if (this.$.experimentIcon.hasAttribute('upside-down')) {
+                    this.$.experimentIcon.removeAttribute('upside-down');
+                } else {
+                    this.$.experimentIcon.setAttribute('upside-down', '');
+                }
+            },
+            toggleSession: function(){
+                this.$.sessionMenu.toggle();
+                if (this.$.sessionIcon.hasAttribute('upside-down')) {
+                    this.$.sessionIcon.removeAttribute('upside-down');
+                } else {
+                    this.$.sessionIcon.setAttribute('upside-down', '');
+                }
+            },
+            toggleDemo: function(){
+                this.$.demoMenu.toggle();
+                if (this.$.demoIcon.hasAttribute('upside-down')) {
+                    this.$.demoIcon.removeAttribute('upside-down');
+                } else {
+                    this.$.demoIcon.setAttribute('upside-down', '');
+                }
+            },
+            toggleDisplay: function(){
+                this.$.displayMenu.toggle();
+                if (this.$.displayIcon.hasAttribute('upside-down')) {
+                    this.$.displayIcon.removeAttribute('upside-down');
+                } else {
+                    this.$.displayIcon.setAttribute('upside-down', '');
+                }
+            },
+            toggleMenu: function(){
+                this.$.menu.toggle();
+                if (this.$.menuIcon.hasAttribute('upside-down')) {
+                    this.$.menuIcon.removeAttribute('upside-down');
+                } else {
+                    this.$.menuIcon.setAttribute('upside-down', '');
+                }
             }
+
         });
     </script>
 </dom-module>
