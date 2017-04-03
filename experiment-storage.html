@@ -169,8 +169,10 @@ Key-value store for experimental data in Arlecchino
                     <span class="flex spanPadding">Display Mode</span><paper-icon-button id="displayIcon" icon="expand-more"></paper-icon-button>
                 </div>
                 <iron-collapse id="displayMenu">
-                    <a on-click="_displayIndividual"> Individual Display</a>
-                    <a on-click="_displayDifference"> Differential Display</a>
+                    <iron-selector selected="[[mode]]" attr-for-selected="name" class="drawer-list" role="navigation">
+                        <a name='show' on-click="_displayIndividual"> Individual Display</a>
+                        <a name='difference' on-click="_displayDifference"> Differential Display</a>
+                    </iron-selector>
                 </iron-collapse>
             </div>
             <template is="dom-if" if="{{modeShow}}">
@@ -323,10 +325,12 @@ Key-value store for experimental data in Arlecchino
 
                 if(this.selectedExperiment.mode =='show'){
                     this.singleExperiment = this.selectedExperiment.exp;
+                    this.mode = 'show';
                 }
 
                 if(this.selectedExperiment.mode =='difference'){
                     var exp = this.selectedExperiment.exp.split('_');
+                    this.mode = 'difference';
                     this.exp1 = 'GLYNSIGHTID_'+exp[0];
                     this.exp2 = 'GLYNSIGHTID_'+exp[1];
                     this._displayDifference();
