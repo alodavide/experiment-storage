@@ -14,14 +14,15 @@
 
 <!--
 `experiment-storage`
-Key-value store for experimental data in Arlecchino
+Key-value store for experimental data in Glynsight
 
+Important: the module is set to work on subfolder /glynsight. Path adjustment is needed in case of subfolder change.
 @demo demo/index.html
 -->
 
 <dom-module id="experiment-storage">
     <template>
-        <style include="iron-flex iron-flex-alignment">
+        <style>
             :host {
                 display: block;
             }
@@ -82,16 +83,16 @@ Key-value store for experimental data in Arlecchino
             }
 
             .sidenav-header {
+                font-family:'Roboto Slab', 'Roboto', 'Noto', sans-serif;
+                font-weight:bold;
                 font-size:15px;
+                display: inline-flex;
                 line-height:24px;
-                display:block;
-                padding:5px 30px;
+                width:85%;
+                padding: 15px 5px 5px 30px;
                 border-left:4px solid transparent;
             }
 
-
-
-            .sidenav-header{font-family:'Roboto Slab', 'Roboto', 'Noto', sans-serif;padding-top:15px;font-weight:bold;border-left:4px solid transparent;}
 
             .sidenav-header:first-of-type{
                 margin-top:15px;
@@ -131,14 +132,14 @@ Key-value store for experimental data in Arlecchino
                     <span class="flex spanPadding">Menu</span><paper-icon-button id="menuIcon" icon="expand-more"></paper-icon-button>
                 </div>
                 <iron-collapse id="menu">
-                    <a href="/">Home</a>
-                    <a href="/about">About</a>
-                    <a href="http://web.expasy.org/contact.html?subject=Arlecchino_Feedback">Contact</a>
+                    <a href="/glynsight/">Home</a>
+                    <a href="/glynsight/about">Quick tour of Glynsight</a>
+                    <a href="http://web.expasy.org/contact.html?subject=Glynsight_Feedback">Contact</a>
                 </iron-collapse>
             </div>
             <div class="drawer-list">
                 <div class="sidenav-header horizontal layout" on-tap="toggleExperiment">
-                    <span class="flex spanPadding">Manage Experiment</span><paper-icon-button id="experimentIcon" icon="expand-more"></paper-icon-button>
+                    <span class="flex spanPadding">Manage Experiments</span><paper-icon-button id="experimentIcon" icon="expand-more"></paper-icon-button>
                 </div>
                 <iron-collapse id="experimentMenu">
                     <a on-click="changeBulkImportState"> Import Experiments</a>
@@ -179,7 +180,7 @@ Key-value store for experimental data in Arlecchino
                 <iron-selector selected="[[singleExperiment]]" attr-for-selected="name" class="drawer-list" role="navigation">
                     <p class="sidenav-header">Experiment List</p>
                     <template is="dom-repeat" items="{{experimentList}}">
-                        <a name="[[item.id]]"  href="/tool/show/[[item.id]]">[[item.name]]</a>
+                        <a name="[[item.id]]"  href="/glynsight/tool/show/[[item.id]]">[[item.name]]</a>
                     </template>
                 </iron-selector>
             </template>
@@ -233,7 +234,7 @@ Key-value store for experimental data in Arlecchino
             <h3 style="color: #f40303">Important: Filenames will be used as experiment names.</h3>
             <div>
                 <paper-dialog-scrollable class="scrollheight">
-                    <vaadin-upload id="bUpload" class="thick-border" accept="text/csv" on-upload-before="uploadExperiment">
+                    <vaadin-upload id="bUpload" class="thick-border" on-upload-before="uploadExperiment">
                         <div class="drop-label">
                             <iron-icon icon="description"></iron-icon>
                             Drop your Experiments here. (Only CSV files)
@@ -261,6 +262,10 @@ Key-value store for experimental data in Arlecchino
                     value: function() { return []; }
                 },
 
+                mode: {
+                    type: String,
+                    value: 'show'
+                },
 
                 experimentId: {
                     type: Number,
@@ -340,8 +345,6 @@ Key-value store for experimental data in Arlecchino
             uploadExperiment: function(event){
 
                 event.preventDefault();
-
-                event.preventDefault();
                 var upload = this.$.bUpload;
                 var file = event.detail.file;
 
@@ -351,12 +354,17 @@ Key-value store for experimental data in Arlecchino
                 reader.onload = function(e) {
                     var glycanMap = {};
                     var experimentInput = {};
+                    var extension = file.name.slice(-4);
+                    if(extension.toUpperCase() !== ".CSV"){
+                        upload.set(['files', upload.files.indexOf(file), 'error'], 'Extension Error. File must be CSV (i.e. example.csv).');
+                        return;
+                    }
 
                     experimentInput.name = file.name.slice(0, -4);
 
                     d3.csv.parse(e.target.result, function(dataCSV) {
-                        if(!dataCSV.composition || !dataCSV.percentage){
-                            upload.set(['files', upload.files.indexOf(file), 'error'], 'Header Error. Composition or Percentage column missing.');
+                        if(!dataCSV.composition || !dataCSV.quantification){
+                            upload.set(['files', upload.files.indexOf(file), 'error'], 'Header Error. Composition or Quantification column missing.');
                             return;
                         }
                         var glycan = new igVisualizer.Glycan(dataCSV);
@@ -375,9 +383,9 @@ Key-value store for experimental data in Arlecchino
                             for(var i =0; i < lastExpData.nodes.length; i++){
                                 var node = lastExpData.nodes[i];
                                 if(glycanMap[node.name]){
-                                    node.percentage = glycanMap[node.name].percentage;
+                                    node.quantification = glycanMap[node.name].quantification;
                                 } else {
-                                    node.percentage = 'nottested';
+                                    node.quantification = 'nottested';
                                 }
                             }
                             experimentInput.data = lastExpData;
@@ -475,7 +483,7 @@ Key-value store for experimental data in Arlecchino
                 localStorage.removeItem("GlynsightExpList");
 
                 this.experimentList = [];
-                window.location = '/';
+                window.location = '/glynsight/';
             },
 
             _removeExperiment: function(){
@@ -485,7 +493,7 @@ Key-value store for experimental data in Arlecchino
                             localStorage.removeItem(this.experimentList[i].id);
                             this.splice('experimentList', i, 1);
                             localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
-                            window.location = '/';
+                            window.location = '/glynsight/';
                             return;
                         }
                     }
@@ -563,7 +571,7 @@ Key-value store for experimental data in Arlecchino
                     var firstExp = this.exp1.replace("GLYNSIGHTID_","");
                     var secondExp = this.exp2.replace("GLYNSIGHTID_","");
                     var link = document.createElement('a');
-                    link.href = "/tool/difference/"+firstExp+"_"+secondExp;
+                    link.href = "/glynsight/tool/difference/"+firstExp+"_"+secondExp;
                     document.body.appendChild(link);
                     link.click();
                 }
@@ -638,4 +646,3 @@ Key-value store for experimental data in Arlecchino
         });
     </script>
 </dom-module>
-
