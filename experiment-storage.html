@@ -145,7 +145,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     <a on-click="changeBulkImportState"> Import Experiments</a>
                     <a on-click="changeRenameDialogState"> Rename Experiments</a>
                     <a on-click="_removeExperiment"> Remove Selected Experiment</a>
-                    <a on-click="_removeAll"> Remove All Experiments</a>
+                    <a on-click="_removeAllWithRedirect"> Remove All Experiments</a>
                 </iron-collapse>
             </div>
             <div class="drawer-list">
@@ -475,6 +475,10 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 }
             },
 
+            _removeAllWithRedirect: function(){
+                this._removeAll();
+                this._redirectToHomePage()
+            },
 
             _removeAll: function(){
                 for(var i = 0; i< this.experimentList.length; i++){
@@ -483,7 +487,6 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 localStorage.removeItem("GlynsightExpList");
 
                 this.experimentList = [];
-                window.location = '/glynsight/';
             },
 
             _removeExperiment: function(){
@@ -493,11 +496,18 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                             localStorage.removeItem(this.experimentList[i].id);
                             this.splice('experimentList', i, 1);
                             localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
-                            window.location = '/glynsight/';
+                            this._redirectToHomePage();
                             return;
                         }
                     }
                 }
+            },
+
+            _redirectToHomePage: function () {
+                var link = document.createElement('a');
+                link.href = "/glynsight/";
+                document.body.appendChild(link);
+                link.click();
             },
 
             _downloadSession: function(){
