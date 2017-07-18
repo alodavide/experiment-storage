@@ -17,7 +17,6 @@
 `experiment-storage`
 Key-value store for experimental data in Glynsight
 
-Important: the module is set to work on subfolder /glynsight. Path adjustment is needed in case of subfolder change.
 @demo demo/index.html
 -->
 
@@ -133,8 +132,8 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     <span class="flex spanPadding">Menu</span><paper-icon-button id="menuIcon" icon="expand-more"></paper-icon-button>
                 </div>
                 <iron-collapse id="menu">
-                    <a href="/glynsight/">Home</a>
-                    <a href="/glynsight/about">Quick tour of Glynsight</a>
+                    <a href="[[rootPath]]">Home</a>
+                    <a href="[[rootPath]]about">Quick tour of Glynsight</a>
                     <a href="http://web.expasy.org/contact.html?subject=Glynsight_Feedback">Contact</a>
                 </iron-collapse>
             </div>
@@ -181,7 +180,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 <iron-selector selected="[[singleExperiment]]" attr-for-selected="name" class="drawer-list" role="navigation">
                     <p class="sidenav-header">Experiment List</p>
                     <template is="dom-repeat" items="{{experimentList}}">
-                        <a name="[[item.id]]"  href="/glynsight/tool/show/[[item.id]]">[[item.name]]</a>
+                        <a name="[[item.id]]"  href="[[rootPath]]tool/show/[[item.id]]">[[item.name]]</a>
                     </template>
                 </iron-selector>
             </template>
@@ -236,10 +235,8 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             <div>
                 <paper-dialog-scrollable class="scrollheight">
                     <vaadin-upload id="bUpload" class="thick-border" on-upload-before="uploadExperiment">
-                        <div class="drop-label">
-                            <iron-icon icon="description"></iron-icon>
-                            Drop your Experiments here. (Only CSV files)
-                        </div>
+                        <iron-icon slot="drop-label-icon" icon="description"></iron-icon>
+                        <span slot="drop-label">Drop your Experiments here. (Only CSV files)</span>
                     </vaadin-upload>
                 </paper-dialog-scrollable>
                 <p>
@@ -257,6 +254,10 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
 
         static get properties() {
           return {
+
+            selectedExperiment:{
+              type: Object
+            },
 
             experimentList: {
               type: Array,
@@ -304,7 +305,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
 
             exp2:{
               observer: '_differenceSelect'
-            }
+            },
+
+            rootPath: String
           };
         }
 
@@ -321,8 +324,14 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
           } else {
             alert('The File APIs are not fully supported in this browser.');
           }
+
           if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
             this._reloadFromCache();
+          }
+
+          //Dirty check on selectedExperiment
+          if(!this.selectedExperiment){
+            return;
           }
 
           if(this.selectedExperiment.mode =='show'){
@@ -502,7 +511,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
 
         _redirectToHomePage() {
           var link = document.createElement('a');
-          link.href = "/glynsight/";
+          link.href = this.rootPath;
           document.body.appendChild(link);
           link.click();
         }
@@ -578,7 +587,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             var firstExp = this.exp1.replace("GLYNSIGHTID_","");
             var secondExp = this.exp2.replace("GLYNSIGHTID_","");
             var link = document.createElement('a');
-            link.href = "/glynsight/tool/difference/"+firstExp+"_"+secondExp;
+            link.href = this.rootPath+"tool/difference/"+firstExp+"_"+secondExp;
             document.body.appendChild(link);
             link.click();
           }
