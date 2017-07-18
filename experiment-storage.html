@@ -1,4 +1,4 @@
-<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../paper-dialog/paper-dialog.html">
 <link rel="import" href="../paper-input/paper-input.html">
 <link rel="import" href="../iron-selector/iron-selector.html">
@@ -6,9 +6,10 @@
 <link rel="import" href="../vaadin-upload/vaadin-upload.html">
 <link rel="import" href="../paper-dialog-scrollable/paper-dialog-scrollable.html">
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-flex-layout/classes/iron-flex-layout.html">
-
+<link rel="import" href="../lib-d3/lib-d3.html">
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
 
@@ -68,7 +69,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
 
                 text-decoration: none;
 
-                color: var(--app-secondary-color);
+                color: black;
 
                 line-height: 40px;
             }
@@ -251,64 +252,68 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
     </template>
 
     <script>
-        Polymer({
+      class ExperimentStorage extends Polymer.Element {
+        static get is() { return 'experiment-storage'; }
 
-            is: 'experiment-storage',
+        static get properties() {
+          return {
 
-            properties: {
-
-                experimentList: {
-                    type: Array,
-                    value: function() { return []; }
-                },
-
-                mode: {
-                    type: String,
-                    value: 'show'
-                },
-
-                experimentId: {
-                    type: Number,
-                    reflectToAttribute: true,
-                    value: 0
-                },
-
-                renameDialogState:{
-                    type: Boolean,
-                    value: false,
-                    observer: "_renameDialogStateChange"
-                },
-
-                bulkImportDialogState:{
-                    type: Boolean,
-                    value: false,
-                    observer: "_bulkImportDialogStateChange"
-                },
-
-                sessionDialogState:{
-                    type: Boolean,
-                    value: false,
-                    observer: "_sessionDialogStateChange"
-                },
-
-                // Must be a boolean for conditional template
-                modeShow:{
-                    type:Boolean,
-                    value: true
-                },
-
-                exp1:{
-                    observer: '_differenceSelect'
-                },
-
-                exp2:{
-                    observer: '_differenceSelect'
-                }
+            experimentList: {
+              type: Array,
+              value: function() { return []; }
             },
 
+            mode: {
+              type: String,
+              value: 'show'
+            },
+
+            experimentId: {
+              type: Number,
+              reflectToAttribute: true,
+              value: 0
+            },
+
+            renameDialogState:{
+              type: Boolean,
+              value: false,
+              observer: "_renameDialogStateChange"
+            },
+
+            bulkImportDialogState:{
+              type: Boolean,
+              value: false,
+              observer: "_bulkImportDialogStateChange"
+            },
+
+            sessionDialogState:{
+              type: Boolean,
+              value: false,
+              observer: "_sessionDialogStateChange"
+            },
+
+            // Must be a boolean for conditional template
+            modeShow:{
+              type:Boolean,
+              value: true
+            },
+
+            exp1:{
+              observer: '_differenceSelect'
+            },
+
+            exp2:{
+              observer: '_differenceSelect'
+            }
+          };
+        }
 
 
-            created: function(){
+
+
+
+
+        constructor(){
                 if(this._lsTest() === true) {
                     console.log("LocalStorage check: success");
                 } else {
@@ -320,10 +325,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 } else {
                     alert('The File APIs are not fully supported in this browser.');
                 }
-                //todo: fix loading d3. Must be loaded only if is not present.
-            },
+            }
 
-            attached: function(){
+        connectedCallback (){
                 if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
                     this._reloadFromCache();
                 }
@@ -340,9 +344,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     this.exp2 = 'GLYNSIGHTID_'+exp[1];
                     this._displayDifference();
                 }
-            },
+            }
 
-            uploadExperiment: function(event){
+            uploadExperiment(event){
 
                 event.preventDefault();
                 var upload = this.$.bUpload;
@@ -405,66 +409,66 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 };
 
                 reader.readAsText(file);
-            },
+            }
 
-            _updateExpList: function(experimentName, experimentId){
+            _updateExpList(experimentName, experimentId){
                 var experiment = {};
                 experiment.name = experimentName;
                 experiment.id = 'GLYNSIGHTID_'+experimentId;
                 this.push('experimentList', experiment);
                 localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
-            },
+            }
 
-            _renameDialogStateChange: function(newValue){
+            _renameDialogStateChange(newValue){
                 if(newValue){
                     this.$.changeExpName.open();
                 } else{
                     this.$.changeExpName.close();
                 }
-            },
+            }
 
-            _bulkImportDialogStateChange: function(newValue){
+            _bulkImportDialogStateChange(newValue){
                 if(newValue){
                     this.$.bulkUpload.open();
                 } else{
                     this.$.bulkUpload.close();
                 }
-            },
+            }
 
-            _sessionDialogStateChange: function(newValue){
+            _sessionDialogStateChange(newValue){
                 if(newValue){
                     this.$.dialogSession.open();
                 } else{
                     this.$.dialogSession.close();
                 }
-            },
+            }
 
-            changeRenameDialogState: function(){
+            changeRenameDialogState(){
                 this.renameDialogState = !this.renameDialogState;
-            },
+            }
 
-            changeBulkImportState: function(){
+            changeBulkImportState(){
                 this.bulkImportDialogState = !this.bulkImportDialogState;
-            },
+            }
 
-            resetUpload: function(){
+            resetUpload(){
                 this.$.bUpload.files = [];
                 this.changeBulkImportState();
-            },
+            }
 
-            changeSessionState: function(){
+            changeSessionState(){
                 this.sessionDialogState = !this.sessionDialogState;
-            },
+            }
 
-            _reloadFromCache: function(){
+            _reloadFromCache(){
                 var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
                 for (var i = 0 ; i< cache.length; i++) {
                     this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
                 }
                 this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
-            },
+            }
 
-            _lsTest: function(){
+            _lsTest(){
                 var test = 'test';
                 try {
                     localStorage.setItem(test, test);
@@ -473,23 +477,23 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 } catch(e) {
                     return false;
                 }
-            },
+            }
 
-            _removeAllWithRedirect: function(){
+            _removeAllWithRedirect(){
                 this._removeAll();
                 this._redirectToHomePage()
-            },
+            }
 
-            _removeAll: function(){
+            _removeAll(){
                 for(var i = 0; i< this.experimentList.length; i++){
                     localStorage.removeItem(this.experimentList[i].exp);
                 }
                 localStorage.removeItem("GlynsightExpList");
 
                 this.experimentList = [];
-            },
+            }
 
-            _removeExperiment: function(){
+            _removeExperiment(){
                 if(this.modeShow) {
                     for (var i = 0; i < this.experimentList.length; i++) {
                         if (this.experimentList[i].id == this.selectedExperiment.exp) {
@@ -501,16 +505,16 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                         }
                     }
                 }
-            },
+            }
 
-            _redirectToHomePage: function () {
+            _redirectToHomePage() {
                 var link = document.createElement('a');
                 link.href = "/glynsight/";
                 document.body.appendChild(link);
                 link.click();
-            },
+            }
 
-            _downloadSession: function(){
+            _downloadSession(){
 
                 var session = {};
                 session.expList = localStorage.getItem('GlynsightExpList');
@@ -529,9 +533,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 document.body.appendChild(downloadLink);
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
-            },
+            }
 
-            _uploadSession: function(){
+            _uploadSession(){
                 var sessionfile = this.$.sessionfile;
                 var that = this;
                 var reader = new FileReader();
@@ -552,9 +556,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
 
                 reader.readAsText(file);
                 this.changeSessionState();
-            },
+            }
 
-            _loadDemoSession: function(){
+            _loadDemoSession(){
                 var that = this;
                 d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
                     that._removeAll();
@@ -566,17 +570,17 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     }
                     that._reloadFromCache();
                 });
-            },
+            }
             // mode = true it is equal to show, false = difference
-            _displayIndividual: function(){
+            _displayIndividual(){
                 this.modeShow = true;
-            },
+            }
 
-            _displayDifference: function(){
+            _displayDifference(){
                 this.modeShow = false;
-            },
+            }
 
-            _differenceSelect: function(){
+            _differenceSelect(){
                 if(this.exp1 && this.exp2){
                     var firstExp = this.exp1.replace("GLYNSIGHTID_","");
                     var secondExp = this.exp2.replace("GLYNSIGHTID_","");
@@ -585,17 +589,17 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     document.body.appendChild(link);
                     link.click();
                 }
-            },
+            }
 
-            _saveExpName: function(){
+            _saveExpName(){
                 var inputs = this.$.changeExpName.querySelectorAll('paper-input');
                 for (var i = 0; i < inputs.length; ++i) {
                     this._updateExperimentName(inputs[i].name,inputs[i].value);
                 }
                 this.changeRenameDialogState();
-            },
+            }
 
-            _updateExperimentName: function(id,name){
+            _updateExperimentName(id,name){
                 for (var i = 0; i < this.experimentList.length; i++) {
                     if (this.experimentList[i].id == id && this.experimentList[i].name != name) {
                         //Update Experiment List
@@ -610,41 +614,41 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                         this.set('experimentList', JSON.parse(localStorage.getItem('GlynsightExpList')));
                     }
                 }
-            },
+            }
 
-            toggleExperiment: function(){
+            toggleExperiment(){
                 this.$.experimentMenu.toggle();
                 if (this.$.experimentIcon.hasAttribute('upside-down')) {
                     this.$.experimentIcon.removeAttribute('upside-down');
                 } else {
                     this.$.experimentIcon.setAttribute('upside-down', '');
                 }
-            },
-            toggleSession: function(){
+            }
+            toggleSession(){
                 this.$.sessionMenu.toggle();
                 if (this.$.sessionIcon.hasAttribute('upside-down')) {
                     this.$.sessionIcon.removeAttribute('upside-down');
                 } else {
                     this.$.sessionIcon.setAttribute('upside-down', '');
                 }
-            },
-            toggleDemo: function(){
+            }
+            toggleDemo (){
                 this.$.demoMenu.toggle();
                 if (this.$.demoIcon.hasAttribute('upside-down')) {
                     this.$.demoIcon.removeAttribute('upside-down');
                 } else {
                     this.$.demoIcon.setAttribute('upside-down', '');
                 }
-            },
-            toggleDisplay: function(){
+            }
+            toggleDisplay(){
                 this.$.displayMenu.toggle();
                 if (this.$.displayIcon.hasAttribute('upside-down')) {
                     this.$.displayIcon.removeAttribute('upside-down');
                 } else {
                     this.$.displayIcon.setAttribute('upside-down', '');
                 }
-            },
-            toggleMenu: function(){
+            }
+            toggleMenu(){
                 this.$.menu.toggle();
                 if (this.$.menuIcon.hasAttribute('upside-down')) {
                     this.$.menuIcon.removeAttribute('upside-down');
@@ -653,6 +657,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 }
             }
 
-        });
+        }
+
+      window.customElements.define(ExperimentStorage.is, ExperimentStorage);
+
     </script>
 </dom-module>
