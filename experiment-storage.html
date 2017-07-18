@@ -8,7 +8,7 @@
 <link rel="import" href="../paper-icon-button/paper-icon-button.html">
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../iron-icons/iron-icons.html">
-<link rel="import" href="../iron-flex-layout/classes/iron-flex-layout.html">
+<link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../lib-d3/lib-d3.html">
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
@@ -309,355 +309,348 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
         }
 
 
-
-
-
-
-        constructor(){
-                if(this._lsTest() === true) {
-                    console.log("LocalStorage check: success");
-                } else {
-                    alert('The LocalStorage is not supported in this browser.');
-                }
-
-                if (window.File && window.FileReader && window.FileList && window.Blob) {
-                    console.log("File APIs check: success");
-                } else {
-                    alert('The File APIs are not fully supported in this browser.');
-                }
-            }
-
         connectedCallback (){
-                if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
-                    this._reloadFromCache();
-                }
+          if(this._lsTest() === true) {
+            console.log("LocalStorage check: success");
+          } else {
+            alert('The LocalStorage is not supported in this browser.');
+          }
 
-                if(this.selectedExperiment.mode =='show'){
-                    this.singleExperiment = this.selectedExperiment.exp;
-                    this.mode = 'show';
-                }
+          if (window.File && window.FileReader && window.FileList && window.Blob) {
+            console.log("File APIs check: success");
+          } else {
+            alert('The File APIs are not fully supported in this browser.');
+          }
+          if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
+            this._reloadFromCache();
+          }
 
-                if(this.selectedExperiment.mode =='difference'){
-                    var exp = this.selectedExperiment.exp.split('_');
-                    this.mode = 'difference';
-                    this.exp1 = 'GLYNSIGHTID_'+exp[0];
-                    this.exp2 = 'GLYNSIGHTID_'+exp[1];
-                    this._displayDifference();
-                }
-            }
+          if(this.selectedExperiment.mode =='show'){
+            this.singleExperiment = this.selectedExperiment.exp;
+            this.mode = 'show';
+          }
 
-            uploadExperiment(event){
-
-                event.preventDefault();
-                var upload = this.$.bUpload;
-                var file = event.detail.file;
-
-                var that = this;
-                var reader = new FileReader();
-
-                reader.onload = function(e) {
-                    var glycanMap = {};
-                    var experimentInput = {};
-                    var extension = file.name.slice(-4);
-                    if(extension.toUpperCase() !== ".CSV"){
-                        upload.set(['files', upload.files.indexOf(file), 'error'], 'Extension Error. File must be CSV (i.e. example.csv).');
-                        return;
-                    }
-
-                    experimentInput.name = file.name.slice(0, -4);
-
-                    d3.csv.parse(e.target.result, function(dataCSV) {
-                        if(!dataCSV.composition || !dataCSV.quantification){
-                            upload.set(['files', upload.files.indexOf(file), 'error'], 'Header Error. Composition or Quantification column missing.');
-                            return;
-                        }
-                        var glycan = new igVisualizer.Glycan(dataCSV);
-                        glycanMap[glycan.composition.toStringNoZeros()] = glycan;
-                    });
-
-                    if(Object.keys(glycanMap).length === 0 && glycanMap.constructor === Object){
-                        upload.set(['files', fileIndex, 'error'], 'No data in the uploaded file.');
-                        return;
-                    }
-
-                    try {
-                        //Check if there is an experiment.
-                        if(that.experimentList[0]){
-                            var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[0].id)).data;
-                            for(var i =0; i < lastExpData.nodes.length; i++){
-                                var node = lastExpData.nodes[i];
-                                if(glycanMap[node.name]){
-                                    node.quantification = glycanMap[node.name].quantification;
-                                } else {
-                                    node.quantification = 'nottested';
-                                }
-                            }
-                            experimentInput.data = lastExpData;
-                        } else {
-                            experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
-                        }
-                        localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
-                        that._updateExpList(experimentInput.name, that.experimentId);
-                        that.experimentId++;
-                        if(!upload.get(['files', upload.files.indexOf(file), 'abort'])){
-                            upload.set(['files', upload.files.indexOf(file), 'progress'], 100);
-                            upload.set(['files', upload.files.indexOf(file), 'complete'], true);
-                        }
-                    } catch(e){
-                        upload.set(['files', fileIndex, 'error'], 'Cannot Process this file. File Corrupted');
-                    }
-                };
-
-                reader.readAsText(file);
-            }
-
-            _updateExpList(experimentName, experimentId){
-                var experiment = {};
-                experiment.name = experimentName;
-                experiment.id = 'GLYNSIGHTID_'+experimentId;
-                this.push('experimentList', experiment);
-                localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
-            }
-
-            _renameDialogStateChange(newValue){
-                if(newValue){
-                    this.$.changeExpName.open();
-                } else{
-                    this.$.changeExpName.close();
-                }
-            }
-
-            _bulkImportDialogStateChange(newValue){
-                if(newValue){
-                    this.$.bulkUpload.open();
-                } else{
-                    this.$.bulkUpload.close();
-                }
-            }
-
-            _sessionDialogStateChange(newValue){
-                if(newValue){
-                    this.$.dialogSession.open();
-                } else{
-                    this.$.dialogSession.close();
-                }
-            }
-
-            changeRenameDialogState(){
-                this.renameDialogState = !this.renameDialogState;
-            }
-
-            changeBulkImportState(){
-                this.bulkImportDialogState = !this.bulkImportDialogState;
-            }
-
-            resetUpload(){
-                this.$.bUpload.files = [];
-                this.changeBulkImportState();
-            }
-
-            changeSessionState(){
-                this.sessionDialogState = !this.sessionDialogState;
-            }
-
-            _reloadFromCache(){
-                var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
-                for (var i = 0 ; i< cache.length; i++) {
-                    this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
-                }
-                this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
-            }
-
-            _lsTest(){
-                var test = 'test';
-                try {
-                    localStorage.setItem(test, test);
-                    localStorage.removeItem(test);
-                    return true;
-                } catch(e) {
-                    return false;
-                }
-            }
-
-            _removeAllWithRedirect(){
-                this._removeAll();
-                this._redirectToHomePage()
-            }
-
-            _removeAll(){
-                for(var i = 0; i< this.experimentList.length; i++){
-                    localStorage.removeItem(this.experimentList[i].exp);
-                }
-                localStorage.removeItem("GlynsightExpList");
-
-                this.experimentList = [];
-            }
-
-            _removeExperiment(){
-                if(this.modeShow) {
-                    for (var i = 0; i < this.experimentList.length; i++) {
-                        if (this.experimentList[i].id == this.selectedExperiment.exp) {
-                            localStorage.removeItem(this.experimentList[i].id);
-                            this.splice('experimentList', i, 1);
-                            localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
-                            this._redirectToHomePage();
-                            return;
-                        }
-                    }
-                }
-            }
-
-            _redirectToHomePage() {
-                var link = document.createElement('a');
-                link.href = "/glynsight/";
-                document.body.appendChild(link);
-                link.click();
-            }
-
-            _downloadSession(){
-
-                var session = {};
-                session.expList = localStorage.getItem('GlynsightExpList');
-
-                for(var i = 0; i< this.experimentList.length; i++){
-                    var id = this.experimentList[i].id;
-                    session[id] = localStorage.getItem(this.experimentList[i].id);
-                }
-
-                var dataSession = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session));
-                var downloadLink = document.createElement("a");
-
-                downloadLink.setAttribute("href",dataSession);
-                downloadLink.setAttribute("download", "glynsightSession.json");
-                downloadLink.target = "_blank";
-                document.body.appendChild(downloadLink);
-                downloadLink.click();
-                document.body.removeChild(downloadLink);
-            }
-
-            _uploadSession(){
-                var sessionfile = this.$.sessionfile;
-                var that = this;
-                var reader = new FileReader();
-                var file = sessionfile.inputElement.files[0];
-
-                reader.onload = function(e) {
-                    that._removeAll();
-                    var dump = JSON.parse(e.target.result);
-                    localStorage.setItem('GlynsightExpList',dump.expList);
-                    for (var key in dump) {
-                        if(key != 'list'){
-                            localStorage.setItem(key,dump[key]);
-                        }
-                    }
-                    that._reloadFromCache();
-                };
-
-
-                reader.readAsText(file);
-                this.changeSessionState();
-            }
-
-            _loadDemoSession(){
-                var that = this;
-                d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
-                    that._removeAll();
-                    localStorage.setItem('GlynsightExpList',data.expList);
-                    for (var key in data) {
-                        if(key != 'list'){
-                            localStorage.setItem(key,data[key]);
-                        }
-                    }
-                    that._reloadFromCache();
-                });
-            }
-            // mode = true it is equal to show, false = difference
-            _displayIndividual(){
-                this.modeShow = true;
-            }
-
-            _displayDifference(){
-                this.modeShow = false;
-            }
-
-            _differenceSelect(){
-                if(this.exp1 && this.exp2){
-                    var firstExp = this.exp1.replace("GLYNSIGHTID_","");
-                    var secondExp = this.exp2.replace("GLYNSIGHTID_","");
-                    var link = document.createElement('a');
-                    link.href = "/glynsight/tool/difference/"+firstExp+"_"+secondExp;
-                    document.body.appendChild(link);
-                    link.click();
-                }
-            }
-
-            _saveExpName(){
-                var inputs = this.$.changeExpName.querySelectorAll('paper-input');
-                for (var i = 0; i < inputs.length; ++i) {
-                    this._updateExperimentName(inputs[i].name,inputs[i].value);
-                }
-                this.changeRenameDialogState();
-            }
-
-            _updateExperimentName(id,name){
-                for (var i = 0; i < this.experimentList.length; i++) {
-                    if (this.experimentList[i].id == id && this.experimentList[i].name != name) {
-                        //Update Experiment List
-                        this.experimentList[i].name = name;
-                        localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
-                        var expData = JSON.parse(localStorage.getItem(this.experimentList[i].id));
-                        //Update Experiment
-                        expData.name = name;
-                        localStorage.setItem(this.experimentList[i].id,JSON.stringify(expData));
-                        //Force Polymer to reevaluate array
-                        this.set('experimentList', []);
-                        this.set('experimentList', JSON.parse(localStorage.getItem('GlynsightExpList')));
-                    }
-                }
-            }
-
-            toggleExperiment(){
-                this.$.experimentMenu.toggle();
-                if (this.$.experimentIcon.hasAttribute('upside-down')) {
-                    this.$.experimentIcon.removeAttribute('upside-down');
-                } else {
-                    this.$.experimentIcon.setAttribute('upside-down', '');
-                }
-            }
-            toggleSession(){
-                this.$.sessionMenu.toggle();
-                if (this.$.sessionIcon.hasAttribute('upside-down')) {
-                    this.$.sessionIcon.removeAttribute('upside-down');
-                } else {
-                    this.$.sessionIcon.setAttribute('upside-down', '');
-                }
-            }
-            toggleDemo (){
-                this.$.demoMenu.toggle();
-                if (this.$.demoIcon.hasAttribute('upside-down')) {
-                    this.$.demoIcon.removeAttribute('upside-down');
-                } else {
-                    this.$.demoIcon.setAttribute('upside-down', '');
-                }
-            }
-            toggleDisplay(){
-                this.$.displayMenu.toggle();
-                if (this.$.displayIcon.hasAttribute('upside-down')) {
-                    this.$.displayIcon.removeAttribute('upside-down');
-                } else {
-                    this.$.displayIcon.setAttribute('upside-down', '');
-                }
-            }
-            toggleMenu(){
-                this.$.menu.toggle();
-                if (this.$.menuIcon.hasAttribute('upside-down')) {
-                    this.$.menuIcon.removeAttribute('upside-down');
-                } else {
-                    this.$.menuIcon.setAttribute('upside-down', '');
-                }
-            }
-
+          if(this.selectedExperiment.mode =='difference'){
+            var exp = this.selectedExperiment.exp.split('_');
+            this.mode = 'difference';
+            this.exp1 = 'GLYNSIGHTID_'+exp[0];
+            this.exp2 = 'GLYNSIGHTID_'+exp[1];
+            this._displayDifference();
+          }
         }
+
+        uploadExperiment(event){
+
+          event.preventDefault();
+          var upload = this.$.bUpload;
+          var file = event.detail.file;
+
+          var that = this;
+          var reader = new FileReader();
+
+          reader.onload = function(e) {
+            var glycanMap = {};
+            var experimentInput = {};
+            var extension = file.name.slice(-4);
+            if(extension.toUpperCase() !== ".CSV"){
+              upload.set(['files', upload.files.indexOf(file), 'error'], 'Extension Error. File must be CSV (i.e. example.csv).');
+              return;
+            }
+
+            experimentInput.name = file.name.slice(0, -4);
+
+            d3.csv.parse(e.target.result, function(dataCSV) {
+              if(!dataCSV.composition || !dataCSV.quantification){
+                upload.set(['files', upload.files.indexOf(file), 'error'], 'Header Error. Composition or Quantification column missing.');
+                return;
+              }
+              var glycan = new igVisualizer.Glycan(dataCSV);
+              glycanMap[glycan.composition.toStringNoZeros()] = glycan;
+            });
+
+            if(Object.keys(glycanMap).length === 0 && glycanMap.constructor === Object){
+              upload.set(['files', fileIndex, 'error'], 'No data in the uploaded file.');
+              return;
+            }
+
+            try {
+              //Check if there is an experiment.
+              if(that.experimentList[0]){
+                var lastExpData = JSON.parse(localStorage.getItem(that.experimentList[0].id)).data;
+                for(var i =0; i < lastExpData.nodes.length; i++){
+                  var node = lastExpData.nodes[i];
+                  if(glycanMap[node.name]){
+                    node.quantification = glycanMap[node.name].quantification;
+                  } else {
+                    node.quantification = 'nottested';
+                  }
+                }
+                experimentInput.data = lastExpData;
+              } else {
+                experimentInput.data = igVisualizer.NetworkBuilder.buildJsonComposition(glycanMap);
+              }
+              localStorage.setItem('GLYNSIGHTID_'+that.experimentId, JSON.stringify(experimentInput));
+              that._updateExpList(experimentInput.name, that.experimentId);
+              that.experimentId++;
+              if(!upload.get(['files', upload.files.indexOf(file), 'abort'])){
+                upload.set(['files', upload.files.indexOf(file), 'progress'], 100);
+                upload.set(['files', upload.files.indexOf(file), 'complete'], true);
+              }
+            } catch(e){
+              upload.set(['files', fileIndex, 'error'], 'Cannot Process this file. File Corrupted');
+            }
+          };
+
+          reader.readAsText(file);
+        }
+
+        _updateExpList(experimentName, experimentId){
+          var experiment = {};
+          experiment.name = experimentName;
+          experiment.id = 'GLYNSIGHTID_'+experimentId;
+          this.push('experimentList', experiment);
+          localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
+        }
+
+        _renameDialogStateChange(newValue){
+          if(newValue){
+            this.$.changeExpName.open();
+          } else{
+            this.$.changeExpName.close();
+          }
+        }
+
+        _bulkImportDialogStateChange(newValue){
+          if(newValue){
+            this.$.bulkUpload.open();
+          } else{
+            this.$.bulkUpload.close();
+          }
+        }
+
+        _sessionDialogStateChange(newValue){
+          if(newValue){
+            this.$.dialogSession.open();
+          } else{
+            this.$.dialogSession.close();
+          }
+        }
+
+        changeRenameDialogState(){
+          this.renameDialogState = !this.renameDialogState;
+        }
+
+        changeBulkImportState(){
+          this.bulkImportDialogState = !this.bulkImportDialogState;
+        }
+
+        resetUpload(){
+          this.$.bUpload.files = [];
+          this.changeBulkImportState();
+        }
+
+        changeSessionState(){
+          this.sessionDialogState = !this.sessionDialogState;
+        }
+
+        _reloadFromCache(){
+          var cache = JSON.parse(localStorage.getItem("GlynsightExpList"));
+          for (var i = 0 ; i< cache.length; i++) {
+            this._updateExpList(cache[i].name,parseInt(cache[i].id.replace('GLYNSIGHTID_','')));
+          }
+          this.experimentId = parseInt(cache[cache.length-1].id.replace('GLYNSIGHTID_','')) + 1;
+        }
+
+        _lsTest(){
+          var test = 'test';
+          try {
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            return true;
+          } catch(e) {
+            return false;
+          }
+        }
+
+        _removeAllWithRedirect(){
+          this._removeAll();
+          this._redirectToHomePage()
+        }
+
+        _removeAll(){
+          for(var i = 0; i< this.experimentList.length; i++){
+            localStorage.removeItem(this.experimentList[i].exp);
+          }
+          localStorage.removeItem("GlynsightExpList");
+
+          this.experimentList = [];
+        }
+
+        _removeExperiment(){
+          if(this.modeShow) {
+            for (var i = 0; i < this.experimentList.length; i++) {
+              if (this.experimentList[i].id == this.selectedExperiment.exp) {
+                localStorage.removeItem(this.experimentList[i].id);
+                this.splice('experimentList', i, 1);
+                localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
+                this._redirectToHomePage();
+                return;
+              }
+            }
+          }
+        }
+
+        _redirectToHomePage() {
+          var link = document.createElement('a');
+          link.href = "/glynsight/";
+          document.body.appendChild(link);
+          link.click();
+        }
+
+        _downloadSession(){
+
+          var session = {};
+          session.expList = localStorage.getItem('GlynsightExpList');
+
+          for(var i = 0; i< this.experimentList.length; i++){
+            var id = this.experimentList[i].id;
+            session[id] = localStorage.getItem(this.experimentList[i].id);
+          }
+
+          var dataSession = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session));
+          var downloadLink = document.createElement("a");
+
+          downloadLink.setAttribute("href",dataSession);
+          downloadLink.setAttribute("download", "glynsightSession.json");
+          downloadLink.target = "_blank";
+          document.body.appendChild(downloadLink);
+          downloadLink.click();
+          document.body.removeChild(downloadLink);
+        }
+
+        _uploadSession(){
+          var sessionfile = this.$.sessionfile;
+          var that = this;
+          var reader = new FileReader();
+          var file = sessionfile.inputElement.files[0];
+
+          reader.onload = function(e) {
+            that._removeAll();
+            var dump = JSON.parse(e.target.result);
+            localStorage.setItem('GlynsightExpList',dump.expList);
+            for (var key in dump) {
+              if(key != 'list'){
+                localStorage.setItem(key,dump[key]);
+              }
+            }
+            that._reloadFromCache();
+          };
+
+
+          reader.readAsText(file);
+          this.changeSessionState();
+        }
+
+        _loadDemoSession(){
+          var that = this;
+          d3.json(this.resolveUrl("./resources/glynsightSessionExample.json"), function(data) {
+            that._removeAll();
+            localStorage.setItem('GlynsightExpList',data.expList);
+            for (var key in data) {
+              if(key != 'list'){
+                localStorage.setItem(key,data[key]);
+              }
+            }
+            that._reloadFromCache();
+          });
+        }
+        // mode = true it is equal to show, false = difference
+        _displayIndividual(){
+          this.modeShow = true;
+        }
+
+        _displayDifference(){
+          this.modeShow = false;
+        }
+
+        _differenceSelect(){
+          if(this.exp1 && this.exp2){
+            var firstExp = this.exp1.replace("GLYNSIGHTID_","");
+            var secondExp = this.exp2.replace("GLYNSIGHTID_","");
+            var link = document.createElement('a');
+            link.href = "/glynsight/tool/difference/"+firstExp+"_"+secondExp;
+            document.body.appendChild(link);
+            link.click();
+          }
+        }
+
+        _saveExpName(){
+          var inputs = this.$.changeExpName.querySelectorAll('paper-input');
+          for (var i = 0; i < inputs.length; ++i) {
+            this._updateExperimentName(inputs[i].name,inputs[i].value);
+          }
+          this.changeRenameDialogState();
+        }
+
+        _updateExperimentName(id,name){
+          for (var i = 0; i < this.experimentList.length; i++) {
+            if (this.experimentList[i].id == id && this.experimentList[i].name != name) {
+              //Update Experiment List
+              this.experimentList[i].name = name;
+              localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
+              var expData = JSON.parse(localStorage.getItem(this.experimentList[i].id));
+              //Update Experiment
+              expData.name = name;
+              localStorage.setItem(this.experimentList[i].id,JSON.stringify(expData));
+              //Force Polymer to reevaluate array
+              this.set('experimentList', []);
+              this.set('experimentList', JSON.parse(localStorage.getItem('GlynsightExpList')));
+            }
+          }
+        }
+
+        toggleExperiment(){
+          this.$.experimentMenu.toggle();
+          if (this.$.experimentIcon.hasAttribute('upside-down')) {
+            this.$.experimentIcon.removeAttribute('upside-down');
+          } else {
+            this.$.experimentIcon.setAttribute('upside-down', '');
+          }
+        }
+        toggleSession(){
+          this.$.sessionMenu.toggle();
+          if (this.$.sessionIcon.hasAttribute('upside-down')) {
+            this.$.sessionIcon.removeAttribute('upside-down');
+          } else {
+            this.$.sessionIcon.setAttribute('upside-down', '');
+          }
+        }
+        toggleDemo (){
+          this.$.demoMenu.toggle();
+          if (this.$.demoIcon.hasAttribute('upside-down')) {
+            this.$.demoIcon.removeAttribute('upside-down');
+          } else {
+            this.$.demoIcon.setAttribute('upside-down', '');
+          }
+        }
+        toggleDisplay(){
+          this.$.displayMenu.toggle();
+          if (this.$.displayIcon.hasAttribute('upside-down')) {
+            this.$.displayIcon.removeAttribute('upside-down');
+          } else {
+            this.$.displayIcon.setAttribute('upside-down', '');
+          }
+        }
+        toggleMenu(){
+          this.$.menu.toggle();
+          if (this.$.menuIcon.hasAttribute('upside-down')) {
+            this.$.menuIcon.removeAttribute('upside-down');
+          } else {
+            this.$.menuIcon.setAttribute('upside-down', '');
+          }
+        }
+
+      }
 
       window.customElements.define(ExperimentStorage.is, ExperimentStorage);
 
