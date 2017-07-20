@@ -17,6 +17,7 @@
 `experiment-storage`
 Key-value store for experimental data in Glynsight
 
+Important: the module is set to work on subfolder /glynsight. Path adjustment is needed in case of subfolder change.
 @demo demo/index.html
 -->
 
@@ -170,35 +171,35 @@ Key-value store for experimental data in Glynsight
                     <span class="flex spanPadding">Display Mode</span><paper-icon-button id="displayIcon" icon="expand-more"></paper-icon-button>
                 </div>
                 <iron-collapse id="displayMenu">
-                    <iron-selector selected="[[mode]]" attr-for-selected="name" class="drawer-list" role="navigation">
+                    <iron-selector selected="[[viewMode]]" attr-for-selected="name" class="drawer-list" role="navigation">
                         <a name='show' on-click="_displayIndividual"> Individual Display</a>
                         <a name='difference' on-click="_displayDifference"> Differential Display</a>
                     </iron-selector>
                 </iron-collapse>
             </div>
-            <template is="dom-if" if="{{modeShow}}">
+            <template is="dom-if" if="{{modeShow(viewMode)}}">
                 <iron-selector selected="[[singleExperiment]]" attr-for-selected="name" class="drawer-list" role="navigation">
                     <p class="sidenav-header">Experiment List</p>
                     <template is="dom-repeat" items="{{experimentList}}">
-                        <a name="[[item.id]]"  href="[[rootPath]]tool/show/[[item.id]]">[[item.name]]</a>
+                        <a name="[[item.nid]]"  href="[[rootPath]]tool/show/[[item.nid]]">[[item.name]]</a>
                     </template>
                 </iron-selector>
             </template>
 
 
-            <template is="dom-if" if="{{!modeShow}}">
+            <template is="dom-if" if="{{!modeShow(viewMode)}}">
                 <!--//In the multi select you need to construct a link /tool/difference/id1_id2-->
                 <iron-selector selected="{{exp1}}" attr-for-selected="name" class="drawer-list">
                     <p class="sidenav-header">Select First Experiment</p>
                     <template is="dom-repeat" items="[[experimentList]]">
-                        <a name="[[item.id]]" >[[item.name]]</a>
+                        <a name="[[item.nid]]" >[[item.name]]</a>
                     </template>
                 </iron-selector>
 
                 <iron-selector  selected="{{exp2}}" attr-for-selected="name" class="drawer-list" >
                     <p class="sidenav-header">Select Second Experiment</p>
                     <template is="dom-repeat" items="[[experimentList]]">
-                        <a name="[[item.id]]" >[[item.name]]</a>
+                        <a name="[[item.nid]]" >[[item.name]]</a>
                     </template>
                 </iron-selector>
             </template>
@@ -235,8 +236,10 @@ Key-value store for experimental data in Glynsight
             <div>
                 <paper-dialog-scrollable class="scrollheight">
                     <vaadin-upload id="bUpload" class="thick-border" on-upload-before="uploadExperiment">
-                        <iron-icon slot="drop-label-icon" icon="description"></iron-icon>
-                        <span slot="drop-label">Drop your Experiments here. (Only CSV files)</span>
+                        <div class="drop-label">
+                            <iron-icon icon="description"></iron-icon>
+                            Drop your Experiments here. (Only CSV files)
+                        </div>
                     </vaadin-upload>
                 </paper-dialog-scrollable>
                 <p>
@@ -255,23 +258,22 @@ Key-value store for experimental data in Glynsight
         static get properties() {
           return {
 
-            selectedExperiment:{
-              type: Object
-            },
-
             experimentList: {
               type: Array,
               value: function() { return []; }
             },
 
-            mode: {
+            viewMode: {
               type: String,
+              reflectToAttribute: true,
               value: 'show'
             },
 
+            /**
+             * Experiment Counter
+             */
             experimentId: {
               type: Number,
-              reflectToAttribute: true,
               value: 0
             },
 
@@ -293,12 +295,6 @@ Key-value store for experimental data in Glynsight
               observer: "_sessionDialogStateChange"
             },
 
-            // Must be a boolean for conditional template
-            modeShow:{
-              type:Boolean,
-              value: true
-            },
-
             exp1:{
               observer: '_differenceSelect'
             },
@@ -307,8 +303,17 @@ Key-value store for experimental data in Glynsight
               observer: '_differenceSelect'
             },
 
-            rootPath: String
+            selectedExperiment:{
+              type: String,
+              reflectToAttribute: true
+            }
           };
+        }
+
+        static get observers() {
+          return [
+            'changeExperiment(selectedExperiment, viewMode)'
+          ]
         }
 
 
@@ -324,30 +329,26 @@ Key-value store for experimental data in Glynsight
           } else {
             alert('The File APIs are not fully supported in this browser.');
           }
-
           if (localStorage.getItem("GlynsightExpList") !== null && localStorage.getItem("GlynsightExpList") !== '') {
             this._reloadFromCache();
           }
-
-          //Dirty check on selectedExperiment
-          if(!this.selectedExperiment){
-            return;
-          }
-
-          if(this.selectedExperiment.mode =='show'){
-            this.singleExperiment = this.selectedExperiment.exp;
-            this.mode = 'show';
-          }
-
-          if(this.selectedExperiment.mode =='difference'){
-            var exp = this.selectedExperiment.exp.split('_');
-            this.mode = 'difference';
-            this.exp1 = 'GLYNSIGHTID_'+exp[0];
-            this.exp2 = 'GLYNSIGHTID_'+exp[1];
-            this._displayDifference();
-          }
         }
 
+        changeExperiment(selectedExperiment, viewMode){
+          if(viewMode == 'show'){
+            this.singleExperiment = selectedExperiment;
+          }
+
+          if(viewMode == 'difference'){
+            var arr = selectedExperiment.split('_');
+            this.exp1 = arr[0];
+            this.exp2 = arr[1];
+          }
+          if(!viewMode || viewMode == ''){
+            this.viewMode = 'show';
+          }
+
+        }
         uploadExperiment(event){
 
           event.preventDefault();
@@ -417,6 +418,7 @@ Key-value store for experimental data in Glynsight
           var experiment = {};
           experiment.name = experimentName;
           experiment.id = 'GLYNSIGHTID_'+experimentId;
+          experiment.nid = experimentId;
           this.push('experimentList', experiment);
           localStorage.setItem('GlynsightExpList',JSON.stringify(this.experimentList));
         }
@@ -496,9 +498,9 @@ Key-value store for experimental data in Glynsight
         }
 
         _removeExperiment(){
-          if(this.modeShow) {
+          if(this.mode == 'show') {
             for (var i = 0; i < this.experimentList.length; i++) {
-              if (this.experimentList[i].id == this.selectedExperiment.exp) {
+              if (this.experimentList[i].id == this.selectedExperiment) {
                 localStorage.removeItem(this.experimentList[i].id);
                 this.splice('experimentList', i, 1);
                 localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
@@ -510,10 +512,7 @@ Key-value store for experimental data in Glynsight
         }
 
         _redirectToHomePage() {
-          var link = document.createElement('a');
-          link.href = this.rootPath;
-          document.body.appendChild(link);
-          link.click();
+          this.set('route.path', this.rootPath);
         }
 
         _downloadSession(){
@@ -575,19 +574,17 @@ Key-value store for experimental data in Glynsight
         }
         // mode = true it is equal to show, false = difference
         _displayIndividual(){
-          this.modeShow = true;
+          this.viewMode = 'show';
         }
 
         _displayDifference(){
-          this.modeShow = false;
+          this.viewMode = 'difference';
         }
 
         _differenceSelect(){
           if(this.exp1 && this.exp2){
-            var firstExp = this.exp1.replace("GLYNSIGHTID_","");
-            var secondExp = this.exp2.replace("GLYNSIGHTID_","");
             var link = document.createElement('a');
-            link.href = this.rootPath+"tool/difference/"+firstExp+"_"+secondExp;
+            link.href = this.rootPath+"tool/difference/"+this.exp1+"_"+this.exp2;
             document.body.appendChild(link);
             link.click();
           }
@@ -657,6 +654,16 @@ Key-value store for experimental data in Glynsight
           } else {
             this.$.menuIcon.setAttribute('upside-down', '');
           }
+        }
+
+
+        modeShow(mode){
+          if(!mode){
+            return;
+          }
+
+          return mode == 'show';
+
         }
 
       }
