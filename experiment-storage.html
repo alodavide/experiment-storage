@@ -236,10 +236,8 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             <div>
                 <paper-dialog-scrollable class="scrollheight">
                     <vaadin-upload id="bUpload" class="thick-border" on-upload-before="uploadExperiment">
-                        <div class="drop-label">
-                            <iron-icon icon="description"></iron-icon>
-                            Drop your Experiments here. (Only CSV files)
-                        </div>
+                        <iron-icon slot="drop-label-icon" icon="description"></iron-icon>
+                        <span slot="drop-label">Drop your Experiments here. (Only CSV files)</span>
                     </vaadin-upload>
                 </paper-dialog-scrollable>
                 <p>
