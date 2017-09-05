@@ -405,7 +405,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                 upload.set(['files', upload.files.indexOf(file), 'complete'], true);
               }
             } catch(e){
-              upload.set(['files', fileIndex, 'error'], 'Cannot Process this file. File Corrupted');
+              upload.set(['files', upload.files.indexOf(file), 'error'], 'Cannot Process this file. File Corrupted');
             }
           };
 
