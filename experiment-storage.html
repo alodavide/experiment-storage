@@ -494,8 +494,8 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             localStorage.removeItem(this.experimentList[i].exp);
           }
           localStorage.removeItem("GlynsightExpList");
-
           this.experimentList = [];
+          this._redirectToHomePage();
         }
 
         _removeExperiment(){
