@@ -380,7 +380,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             });
 
             if(Object.keys(glycanMap).length === 0 && glycanMap.constructor === Object){
-              upload.set(['files', upload.files.indexOf(file), 'error'], 'No data in the uploaded file. Please upload only coma separated files.');
+              upload.set(['files', upload.files.indexOf(file), 'error'], 'No data present. Please upload coma separated files.');
               return;
             }
 
