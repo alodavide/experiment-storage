@@ -541,7 +541,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
           var sessionfile = this.$.sessionfile;
           var that = this;
           var reader = new FileReader();
-          var file = sessionfile.inputElement.files[0];
+          var file = sessionfile.inputElement.inputElement.files[0];
 
           reader.onload = function(e) {
             that._removeAll();
