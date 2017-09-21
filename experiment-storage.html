@@ -357,6 +357,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
           var reader = new FileReader();
 
           reader.onload = function(e) {
+            //Quick Fix: Remove status queued from the interface
+            upload.set(['files', upload.files.indexOf(file), 'status'], null);
+            //
             var glycanMap = {};
             var experimentInput = {};
             var extension = file.name.slice(-4);
@@ -377,7 +380,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             });
 
             if(Object.keys(glycanMap).length === 0 && glycanMap.constructor === Object){
-              upload.set(['files', upload.files.indexOf(file), 'error'], 'No data in the uploaded file.');
+              upload.set(['files', upload.files.indexOf(file), 'error'], 'No data in the uploaded file. Please upload only coma separated files.');
               return;
             }
 
@@ -496,9 +499,9 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
         }
 
         _removeExperiment(){
-          if(this.mode == 'show') {
+          if(this.viewMode == 'show') {
             for (var i = 0; i < this.experimentList.length; i++) {
-              if (this.experimentList[i].id == this.selectedExperiment) {
+              if (this.experimentList[i].nid == this.selectedExperiment) {
                 localStorage.removeItem(this.experimentList[i].id);
                 this.splice('experimentList', i, 1);
                 localStorage.setItem('GlynsightExpList', JSON.stringify(this.experimentList));
