@@ -4,6 +4,7 @@
   "main": "experiment-storage.html",
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.2",
+    "app-route": "PolymerElements/app-route#2.0-preview",
     "paper-dialog": "PolymerElements/paper-dialog#^2.0.0",
     "paper-dialog-scrollable": "PolymerElements/paper-dialog-scrollable#^2.1.0",
     "paper-input": "PolymerElements/paper-input#^2.0.1",

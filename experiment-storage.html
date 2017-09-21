@@ -10,6 +10,8 @@
 <link rel="import" href="../iron-icons/iron-icons.html">
 <link rel="import" href="../iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../lib-d3/lib-d3.html">
+<link rel="import" href="../app-route/app-route.html">
+
 
 <script type="text/javascript" src="./js/igVisualizer.min.js"></script>
 
@@ -126,6 +128,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             }
 
         </style>
+        <app-location route="{{route}}" url-space-regex="^[[rootPath]]"></app-location>
 
         <div>
             <div class="drawer-list">
