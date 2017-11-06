@@ -307,6 +307,11 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
             selectedExperiment:{
               type: String,
               reflectToAttribute: true
+            },
+
+            rootPath:{
+              type: String,
+              reflectToAttribute: true
             }
           };
         }
@@ -511,7 +516,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
         }
 
         _redirectToHomePage() {
-          window.location ='/';
+          window.location = this.rootPath;
         }
 
         _downloadSession(){
