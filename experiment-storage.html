@@ -149,7 +149,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
                     <a on-click="changeBulkImportState"> Import Experiments</a>
                     <a on-click="changeRenameDialogState"> Rename Experiments</a>
                     <a on-click="_removeExperiment"> Remove Selected Experiment</a>
-                    <a on-click="_removeAllWithRedirect"> Remove All Experiments</a>
+                    <a on-click="_removeAll"> Remove All Experiments</a>
                 </iron-collapse>
             </div>
             <div class="drawer-list">
@@ -487,11 +487,6 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
           }
         }
 
-        _removeAllWithRedirect(){
-          this._removeAll();
-          this._redirectToHomePage()
-        }
-
         _removeAll(){
           for(var i = 0; i< this.experimentList.length; i++){
             localStorage.removeItem(this.experimentList[i].exp);
@@ -516,7 +511,7 @@ Important: the module is set to work on subfolder /glynsight. Path adjustment is
         }
 
         _redirectToHomePage() {
-          this.set('route.path', this.rootPath);
+          window.location ='/';
         }
 
         _downloadSession(){
